@@ -47,7 +47,7 @@ The system SHALL proporcionar un motor de importación que descubra cuentas loca
 
 ### Requirement: Gestión de pool y cuenta activa
 
-The system SHALL proporcionar comandos de terminal para listar cuentas, cambiar la cuenta activa y asignar alias amigables.
+The system SHALL proporcionar comandos de terminal y una interfaz interactiva TUI para listar cuentas, cambiar la cuenta activa, asignar alias amigables y administrar cuentas del pool.
 
 #### Scenario: Listar cuentas sin exponer tokens
 - **WHEN** el usuario ejecuta `conduit account list`
@@ -60,6 +60,10 @@ The system SHALL proporcionar comandos de terminal para listar cuentas, cambiar 
 #### Scenario: Asignación y limpieza de alias
 - **WHEN** el usuario ejecuta `conduit account alias <provider> <target> <alias>`
 - **THEN** asocia el alias amigable a la cuenta o lo elimina si se especifica `clear`
+
+#### Scenario: Panel interactivo AccountManager con Ink en terminal TTY
+- **WHEN** el usuario ejecuta `conduit account` sin subcomandos en una terminal interactiva
+- **THEN** renderiza un componente TUI en Ink que permite navegar con flechas, activar con 's', editar alias con 'e', eliminar con 'd' y salir con 'q'
 
 ### Requirement: Dashboard interactivo de cuotas en terminal
 
