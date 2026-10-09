@@ -1,0 +1,6 @@
+schema: spec-driven
+created: 2026-10-09
+goal: Permitir que cualquier agente supervisor (Claude, Codex, Antigravity,
+  OpenCode, Kilo) despache tareas a subagentes autónomos que operan aislados en
+  un Git Worktree temporal, ejecutan bucle de herramientas con tests y
+  auto-failover, y devuelven diff limpio al supervisor

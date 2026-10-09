@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Conduit System Architecture",
+    "output": "architecture.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "clients", "type": "external", "label": "Host Supervisors", "sublabel": "Claude · Codex · Cursor · Kilo", "pos": [40, 260], "size": [150, 64] },
+    { "id": "mcp_server", "type": "backend", "label": "MCP Server", "sublabel": "stdio (dual-era 2026/2025)", "pos": [260, 180], "size": [160, 64] },
+    { "id": "cli_tui", "type": "backend", "label": "CLI & Ink TUI", "sublabel": "quota · account · use", "pos": [260, 340], "size": [160, 64] },
+    { "id": "core_router", "type": "backend", "label": "Pool & Failover Engine", "sublabel": "429 auto-rotation", "pos": [490, 260], "size": [170, 64] },
+    { "id": "worktree_mgr", "type": "backend", "label": "Worktree Manager", "sublabel": "Git branch sandbox", "pos": [490, 110], "size": [170, 64] },
+    { "id": "subagent_loop", "type": "backend", "label": "Subagent Tool Loop", "sublabel": "15-step bounded runtime", "pos": [730, 110], "size": [170, 64] },
+    { "id": "secure_store", "type": "security", "label": "Secure Store", "sublabel": "~/.conduit/pools.json", "pos": [490, 420], "size": [170, 64], "tag": "chmod 0600" },
+    { "id": "worktree_dir", "type": "database", "label": "Isolated Worktrees", "sublabel": ".conduit/worktrees/<id>", "pos": [960, 110], "size": [170, 64] },
+    { "id": "sub_pools", "type": "cloud", "label": "Subscription Pools", "sublabel": "ChatGPT Plus · Antigravity", "pos": [730, 260], "size": [170, 64], "tag": "$20/mo flat-rate" },
+    { "id": "cloud_apis", "type": "cloud", "label": "Official APIs", "sublabel": "Anthropic · DeepSeek · Groq", "pos": [730, 420], "size": [170, 64] },
+    { "id": "local_ollama", "type": "database", "label": "Ollama Instance", "sublabel": "localhost :11434", "pos": [960, 420], "size": [160, 64], "tag": "$0 offline" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Conduit Local Runtime (Node.js ESM)", "wraps": ["mcp_server", "cli_tui", "core_router", "worktree_mgr", "subagent_loop", "secure_store"] },
+    { "kind": "security-group", "label": "Subagent Sandbox Boundary", "wraps": ["worktree_mgr", "subagent_loop", "worktree_dir"] }
+  ],
+  "connections": [
+    { "id": "clients-to-mcp", "from": "clients", "to": "mcp_server", "label": "JSON-RPC / stdio", "variant": "emphasis" },
+    { "id": "clients-to-cli", "from": "clients", "to": "cli_tui", "label": "terminal / TTY", "variant": "emphasis" },
+    { "id": "mcp-to-router", "from": "mcp_server", "to": "core_router", "label": "delegate / quota" },
+    { "id": "cli-to-router", "from": "cli_tui", "to": "core_router", "label": "use / quotas" },
+    { "id": "router-to-store", "from": "core_router", "to": "secure_store", "label": "atomic 0600 IO", "variant": "security" },
+    { "id": "router-to-pools", "from": "core_router", "to": "sub_pools", "label": "OAuth sessions", "variant": "emphasis" },
+    { "id": "router-to-apis", "from": "core_router", "to": "cloud_apis", "label": "API keys" },
+    { "id": "router-to-ollama", "from": "core_router", "to": "local_ollama", "label": "HTTP :11434" },
+    { "id": "mcp-to-worktree", "from": "mcp_server", "to": "worktree_mgr", "label": "dispatch_subagent" },
+    { "id": "worktree-to-dir", "from": "worktree_mgr", "to": "worktree_dir", "label": "git worktree add" },
+    { "id": "worktree-to-loop", "from": "worktree_mgr", "to": "subagent_loop", "label": "run sandbox" },
+    { "id": "loop-to-router", "from": "subagent_loop", "to": "core_router", "label": "pool reasoning" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Host Supervision", "items": ["Works with any MCP client (Claude Code, Codex, Antigravity)", "No lock-in to any specific vendor or IDE"] },
+    { "dot": "emerald", "title": "Sandbox & Worktrees", "items": ["Spawns subagents into temporary Git Worktrees", "Path confinement prevents directory traversal", "Returns unified git diff with zero branch collisions"] },
+    { "dot": "rose", "title": "Subscription Pools & Resilience", "items": ["Reuses flat-rate consumer plans ($20/mo)", "Transparent 429 auto-failover to next pool account", "Strict chmod 0600 atomic file storage"] }
+  ]
+}

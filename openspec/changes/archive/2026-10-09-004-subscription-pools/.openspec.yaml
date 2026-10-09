@@ -1,0 +1,6 @@
+schema: spec-driven
+created: 2026-10-09
+goal: Permitir la importación no destructiva de cuentas existentes de
+  Antigravity, Codex y Claude Code, almacenamiento seguro en
+  ~/.conduit/pools.json, dashboard interactivo con React/Ink y herramientas MCP
+  de cuota y rotación

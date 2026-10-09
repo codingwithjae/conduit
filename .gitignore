@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.tmp/
+.conduit/
+.env
+.env.*
+!.env.example
+# pnpm-lock.yaml is the repository's canonical lockfile.
+package-lock.json
+yarn.lock
+bun.lock
+bun.lockb

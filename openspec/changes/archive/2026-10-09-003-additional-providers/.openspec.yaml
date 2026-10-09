@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-08
+goal: Expandir el catálogo de proveedores de Conduit con soporte para Anthropic
+  directo, proveedores compatibles con OpenAI y servidor local Ollama

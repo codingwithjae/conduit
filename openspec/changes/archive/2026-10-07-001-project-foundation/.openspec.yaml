@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-07
+goal: Establecer un ejecutable CLI mínimo, compilable y verificable antes de
+  añadir proveedores, autenticación o MCP

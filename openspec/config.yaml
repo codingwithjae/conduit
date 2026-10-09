@@ -1,0 +1,43 @@
+schema: spec-driven
+
+context: |
+  Project: Conduit, a terminal-first, provider-agnostic CLI and MCP server for model discovery,
+  account visibility, and policy-compliant model delegation.
+  Current phase: CLI/TUI clients only. Do not design desktop or IDE-specific features in phase one.
+  The binding project constitution is docs/constitution.md. Every proposal and design must comply with it.
+  Workflow: explore when requirements are unclear; propose a change with requirements, design, and atomic tasks;
+  review those artifacts before implementation; implement one approved task at a time; validate requirements and tests;
+  archive only after validation.
+  Requirements should use EARS-style statements and include observable scenarios, including failure and policy cases.
+  Prefer official, documented provider APIs and authentication. Never rely on private endpoints, spoof another client,
+  or rotate subscription accounts to evade quotas. Experimental auth adapters require explicit opt-in and documented risks.
+  A delegate_task call may send only its explicit prompt to the selected provider after per-call confirmation; never auto-attach files, history, environment variables, or stored credentials.
+  Keep provider, account, CLI-client, and TUI concerns behind separate interfaces. Model discovery must be dynamic where
+  the provider exposes an official catalog; do not claim an alias is latest unless the provider confirms availability.
+  Language: es
+  All artifacts must be written in es.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - Define the user problem, goals, non-goals, and policy/security risks.
+    - Keep the phase-one scope CLI/TUI-only.
+  specs:
+    - Use EARS-style functional requirements and concrete scenarios.
+    - Include provider errors, unavailable models, stale quota, and credential failures where relevant.
+  design:
+    - Separate provider adapters, account storage, model discovery, CLI/TUI, and MCP transport.
+    - State which behavior uses official documented APIs and identify any experimental adapter explicitly.
+  tasks:
+    - Keep tasks atomic and independently verifiable.
+    - Every task must include a "Hecho cuando" acceptance criterion and relevant tests.
+
+operations:
+  apply:
+    guidance:
+      - Work only on tasks approved in the active OpenSpec change.
+      - Add or update tests with each behavior change and report validation evidence.
+  archive:
+    guidance:
+      - Confirm all requirements are implemented and validated before archiving.

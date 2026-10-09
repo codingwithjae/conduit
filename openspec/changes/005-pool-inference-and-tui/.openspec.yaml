@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-10-09
+goal: Añadir comando CLI conduit use para ejecutar inferencia usando cuentas
+  activas del pool con rotación transparente ante límites de cuota, e
+  implementar interfaz interactiva en Ink para conduit account
