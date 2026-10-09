@@ -43,4 +43,4 @@ jobs:
         run: pnpm run build
 
       - name: Validate OpenSpec specifications
-        run: npx --yes @fission-ai/openspec validate --strict
+        run: npx --yes @fission-ai/openspec validate --specs --strict

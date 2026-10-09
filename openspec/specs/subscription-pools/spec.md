@@ -1,90 +1,91 @@
-# subscription-pools Specification
+# Spec
 
 ## Purpose
-Gestionar pools multi-cuenta de suscripción con almacenamiento local seguro en modo 0600, importación universal no destructiva y dashboard interactivo reactivo en terminal.
+
+Manage multi-account subscription pools with secure local storage in 0600 mode, non-destructive universal import, and an interactive reactive terminal dashboard.
 
 ## Requirements
 
-### Requirement: Almacén local seguro de cuentas
+### Requirement: Secure local account storage
 
-The system SHALL almacenar y persistir los pools de cuentas en el archivo local `~/.conduit/pools.json` aplicando permisos de sistema de archivos `0600` de forma atómica en cada guardado, incluyendo el snapshot de cuotas de cada cuenta.
+The system SHALL store and persist account pools in `~/.conduit/pools.json`, enforcing strict `0600` file permissions atomically on every write, including quota snapshots.
 
-#### Scenario: Guardado atómico con permisos 0600
-- **WHEN** Conduit crea o actualiza el archivo de pools
-- **THEN** escribe los datos mediante archivo temporal y reemplazo atómico, asegurando que los permisos queden estrictamente en `0600` (`rw-------`)
+#### Scenario: Atomic save with 0600 permissions
+- **WHEN** Conduit creates or updates the pools file
+- **THEN** it writes via a temporary file and atomic rename, ensuring permissions are strictly `0600` (`rw-------`)
 
-#### Scenario: Lectura de cuentas persistidas
-- **WHEN** Conduit inicia o carga el estado de cuentas
-- **THEN** lee `~/.conduit/pools.json` y valida su estructura sin filtrar tokens o secretos a la salida estándar
+#### Scenario: Reading persisted accounts
+- **WHEN** Conduit initializes or loads account state
+- **THEN** it parses `~/.conduit/pools.json` and validates its structure without leaking tokens or secrets to standard output
 
-### Requirement: Importador universal no destructivo
+### Requirement: Universal non-destructive importer
 
-The system SHALL proporcionar un motor de importación que descubra cuentas locales existentes en Antigravity, Codex y Claude Code mediante lectura de solo lectura estricta sin alterar los archivos de origen y capturando los snapshots de cuota disponibles.
+The system SHALL provide an import engine that discovers local accounts from Antigravity, Codex, and Claude Code using strict read-only access without altering source files.
 
-#### Scenario: Descubrimiento de cuentas desde Antigravity
-- **WHEN** el usuario ejecuta el comando de importación y existe `~/.config/opencode/antigravity-accounts.json`
-- **THEN** Conduit detecta y lee las cuentas de Google Antigravity extrayendo correos, etiquetas, refresh tokens y el árbol `cachedQuota` de Gemini y Non-Gemini
+#### Scenario: Discover accounts from Antigravity
+- **WHEN** the user runs import and `~/.config/opencode/antigravity-accounts.json` exists
+- **THEN** Conduit detects Google Antigravity accounts and extracts emails, labels, refresh tokens, and cached quota trees
 
-#### Scenario: Descubrimiento de cuentas desde Codex y Kilo OpenAI
-- **WHEN** existen archivos de cuentas de OpenAI en `~/.config/kilo/openai-accounts.json` o `~/.local/share/kilo/auth.json`
-- **THEN** Conduit detecta y lee las cuentas de OpenAI extrayendo correos, planes y tokens de sesión
+#### Scenario: Discover accounts from Codex and Kilo OpenAI
+- **WHEN** OpenAI account files exist in `~/.config/kilo/openai-accounts.json` or `~/.local/share/kilo/auth.json`
+- **THEN** Conduit detects OpenAI accounts and extracts emails, plans, and session tokens
 
-#### Scenario: Descubrimiento de cuentas desde Claude Code
-- **WHEN** existen archivos de autenticación en `~/.config/opencode/anthropic-auth.json` o `auth.json`
-- **THEN** Conduit detecta y lee las sesiones de Claude Pro/Max extrayendo tokens y cuotas cacheadas en `anthropic-auth-state.json`
+#### Scenario: Discover accounts from Claude Code
+- **WHEN** authentication files exist in `~/.config/opencode/anthropic-auth.json` or `auth.json`
+- **THEN** Conduit detects Claude Pro/Max sessions and extracts tokens and cached quotas from `anthropic-auth-state.json`
 
-#### Scenario: Importación selectiva e interactiva
-- **WHEN** el usuario ejecuta `conduit account import`
-- **THEN** el sistema presenta un asistente interactivo con las fuentes detectadas permitiendo confirmar la importación
+#### Scenario: Interactive selective import
+- **WHEN** the user executes `conduit account import`
+- **THEN** the system scans available sources and imports discovered accounts
 
-#### Scenario: Deduplicación de cuentas existentes
-- **WHEN** se importa una cuenta que ya existe en el almacén de Conduit
-- **THEN** actualiza los tokens y cuotas correspondientes sin duplicar la entrada en el pool
+#### Scenario: Deduplication of existing accounts
+- **WHEN** an imported account already exists in the Conduit pool
+- **THEN** it updates the corresponding tokens and quota snapshot without duplicating the account entry
 
-#### Scenario: Origen de solo lectura estricta
-- **WHEN** el importador lee cualquiera de las configuraciones externas
-- **THEN** abre los archivos en modo exclusivo de lectura y no modifica ni elimina los archivos originales
+#### Scenario: Strict read-only source access
+- **WHEN** the importer reads any external configuration file
+- **THEN** it opens files in read-only mode and never modifies or deletes source files
 
-### Requirement: Gestión de pool y cuenta activa
+### Requirement: Pool and active account management
 
-The system SHALL proporcionar comandos de terminal y una interfaz interactiva TUI para listar cuentas, cambiar la cuenta activa, asignar alias amigables y administrar cuentas del pool.
+The system SHALL provide terminal commands and an interactive TUI to list accounts, switch active accounts, and manage friendly aliases.
 
-#### Scenario: Listar cuentas sin exponer tokens
-- **WHEN** el usuario ejecuta `conduit account list`
-- **THEN** muestra proveedor, índice, correo o alias, plan detectado y estado activo, sin imprimir jamás tokens de acceso o refresh
+#### Scenario: List accounts without exposing tokens
+- **WHEN** the user runs `conduit account list`
+- **THEN** it displays provider, index, email/alias, detected plan, and active status without printing access or refresh tokens
 
-#### Scenario: Cambio de cuenta activa por índice o alias
-- **WHEN** el usuario ejecuta `conduit account switch <provider> <target>`
-- **THEN** actualiza el puntero de cuenta activa para ese proveedor y guarda el cambio con permisos `0600`
+#### Scenario: Switch active account by index or alias
+- **WHEN** the user runs `conduit account switch <provider> <target>`
+- **THEN** it updates the active account index for that provider and persists the change with `0600` permissions
 
-#### Scenario: Asignación y limpieza de alias
-- **WHEN** el usuario ejecuta `conduit account alias <provider> <target> <alias>`
-- **THEN** asocia el alias amigable a la cuenta o lo elimina si se especifica `clear`
+#### Scenario: Assign and clear aliases
+- **WHEN** the user runs `conduit account alias <provider> <target> <alias>`
+- **THEN** it associates the alias with the account or removes it if `clear` is specified
 
-#### Scenario: Panel interactivo AccountManager con Ink en terminal TTY
-- **WHEN** el usuario ejecuta `conduit account` sin subcomandos en una terminal interactiva
-- **THEN** renderiza un componente TUI en Ink que permite navegar con flechas, activar con 's', editar alias con 'e', eliminar con 'd' y salir con 'q'
+#### Scenario: Interactive AccountManager panel with Ink
+- **WHEN** the user runs `conduit account` without subcommands in an interactive terminal
+- **THEN** it renders an Ink TUI supporting arrow navigation, `s` to activate, `e` to edit alias, `d` to delete, and `q` to quit
 
-### Requirement: Dashboard interactivo de cuotas en terminal
+### Requirement: Interactive terminal quota dashboard
 
-The system SHALL renderizar un dashboard TUI interactivo en vivo con Ink / React al ejecutar `conduit quota` con soporte para snapshots locales rápidos y refresco bajo demanda.
+The system SHALL render a live interactive TUI dashboard using Ink / React when running `conduit quota`, supporting fast local snapshots and on-demand refresh.
 
-#### Scenario: Presentación de cuotas reactiva con Ink
-- **WHEN** el usuario ejecuta `conduit quota` en una terminal interactiva
-- **THEN** renderiza un componente React en terminal con barras visuales de cuota, porcentajes disponibles y cuentas del pool a partir del snapshot local en menos de 50ms
+#### Scenario: Reactive quota presentation with Ink
+- **WHEN** the user runs `conduit quota` in an interactive terminal
+- **THEN** it renders an interactive React component with visual quota bars, available percentages, and accounts from the local snapshot in under 50ms
 
-#### Scenario: Desglose exhaustivo de 4 líneas para Google Antigravity
-- **WHEN** se visualiza una cuenta de Google Antigravity en el dashboard
-- **THEN** muestra las 4 ventanas de cuota reales: Gemini/5h, Gemini/Wk, Non-Gem/5h y Non-Gem/Wk con sus porcentajes y tiempos relativos de reset
+#### Scenario: Exhaustive 4-line breakdown for Google Antigravity
+- **WHEN** displaying a Google Antigravity account in the dashboard
+- **THEN** it displays all 4 quota windows: Gemini/5h, Gemini/Wk, Non-Gem/5h, and Non-Gem/Wk with percentages and relative reset countdowns
 
-#### Scenario: Refresco de cuotas bajo demanda
-- **WHEN** el usuario presiona la tecla 'r' en la TUI o ejecuta `conduit quota --refresh`
-- **THEN** consulta las fuentes/APIs en vivo, actualiza los snapshots en `~/.conduit/pools.json` y refresca la vista inmediatamente
+#### Scenario: On-demand live quota refresh
+- **WHEN** the user presses `r` in the TUI or runs `conduit quota --refresh`
+- **THEN** it queries live provider sources, updates snapshots in `~/.conduit/pools.json`, and refreshes the view immediately
 
-#### Scenario: Temporizador en vivo de reinicio de cuotas
-- **WHEN** el dashboard de cuotas está activo en pantalla
-- **THEN** actualiza los segundos restantes en vivo sin parpadeo de pantalla
+#### Scenario: Live countdown timer
+- **WHEN** the quota dashboard is active on screen
+- **THEN** it decrements remaining countdown seconds live without screen flicker
 
-#### Scenario: Navegación y activación mediante teclado
-- **WHEN** el usuario navega con las flechas del teclado y presiona Enter sobre una cuenta
-- **THEN** cambia inmediatamente la cuenta activa del pool y actualiza el indicador visual en tiempo real
+#### Scenario: Keyboard navigation and activation
+- **WHEN** the user navigates with arrow keys and presses Enter on an account
+- **THEN** it switches the active account in the pool immediately and updates the visual indicator in real time

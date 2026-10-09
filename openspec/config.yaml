@@ -14,8 +14,8 @@ context: |
   A delegate_task call may send only its explicit prompt to the selected provider after per-call confirmation; never auto-attach files, history, environment variables, or stored credentials.
   Keep provider, account, CLI-client, and TUI concerns behind separate interfaces. Model discovery must be dynamic where
   the provider exposes an official catalog; do not claim an alias is latest unless the provider confirms availability.
-  Language: es
-  All artifacts must be written in es.
+  Language: en
+  All artifacts must be written in en.
   Keep OpenSpec structural headings and SHALL/MUST keywords in English.
 
 # Per-artifact rules
@@ -31,7 +31,7 @@ rules:
     - State which behavior uses official documented APIs and identify any experimental adapter explicitly.
   tasks:
     - Keep tasks atomic and independently verifiable.
-    - Every task must include a "Hecho cuando" acceptance criterion and relevant tests.
+    - Every task must include an acceptance criterion ("Done when:") and relevant tests.
 
 operations:
   apply:

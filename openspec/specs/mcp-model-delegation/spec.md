@@ -1,284 +1,237 @@
-# mcp-model-delegation Specification
+# Spec
 
 ## Purpose
-Exponer un servidor MCP stdio pequeño e independiente del agente anfitrión para descubrir los modelos disponibles en APIs oficiales y delegar tareas de texto autorizadas.
+
+Expose a lightweight, agent-agnostic MCP stdio server that discovers models available through official APIs and delegates explicitly authorized text tasks.
 
 ## Requirements
 
-### Requirement: MCP dual-era sobre stdio
+### Requirement: Dual-era MCP over stdio
 
-The system SHALL proporcionar `conduit mcp serve` mediante `serveStdio` del SDK oficial y soportar clientes MCP modernos (2026-07-28) y legacy (2025-era).
+The system SHALL provide `conduit mcp serve` using `serveStdio` from the official MCP SDK, supporting both modern (2026-07-28) and legacy (2025-era) MCP clients.
 
-#### Scenario: Descubrimiento moderno
-- **WHEN** un cliente moderno envía `server/discover` con metadata `_meta` válida
-- **THEN** el servidor responde con `resultType: complete`, `supportedVersions: ["2026-07-28"]`, capacidad `tools`, identidad en `_meta` y hints de caché
+#### Scenario: Modern discovery
+- **WHEN** a modern client sends `server/discover` with valid `_meta` metadata
+- **THEN** the server responds with `resultType: complete`, `supportedVersions: ["2026-07-28"]`, `tools` capability, server identity in `_meta`, and cache hints
 
-#### Scenario: Hints de cache de descubrimiento
-- **WHEN** un cliente moderno envía `server/discover`
-- **THEN** la respuesta incluye `ttlMs: 300000` y `cacheScope: public`
+#### Scenario: Discovery cache hints
+- **WHEN** a modern client sends `server/discover`
+- **THEN** the response includes `ttlMs: 300000` and `cacheScope: public`
 
-#### Scenario: Llamada moderna sin handshake
-- **WHEN** un cliente moderno envía `tools/list` con metadata por solicitud sin haber enviado `initialize`
-- **THEN** el servidor procesa la solicitud de forma stateless y no depende de metadata almacenada de solicitudes anteriores
+#### Scenario: Modern request without handshake
+- **WHEN** a modern client sends `tools/list` with per-request metadata without sending `initialize`
+- **THEN** the server processes the request statelessly without relying on state from prior requests
 
-#### Scenario: Compatibilidad con cliente legacy
-- **WHEN** un cliente legacy inicia con `initialize` y continúa con `notifications/initialized`
-- **THEN** `serveStdio` atiende la conexión con semántica legacy y permite `tools/list`/`tools/call`
+#### Scenario: Legacy client compatibility
+- **WHEN** a legacy client connects with `initialize` followed by `notifications/initialized`
+- **THEN** `serveStdio` handles the connection using legacy semantics and serves `tools/list` and `tools/call`
 
-#### Scenario: Lista de herramientas moderna cacheable
-- **WHEN** un cliente moderno solicita `tools/list`
-- **THEN** el resultado completo incluye `resultType: complete`, `ttlMs: 300000` y `cacheScope: public`
+#### Scenario: Modern cacheable tools list
+- **WHEN** a modern client requests `tools/list`
+- **THEN** the complete result includes `resultType: complete`, `ttlMs: 300000`, and `cacheScope: public`
 
-#### Scenario: Resultado moderno de llamada a herramienta
-- **WHEN** una llamada moderna a `tools/call` termina correctamente
-- **THEN** la respuesta MCP incluye `resultType: complete`; una respuesta de herramienta con error usa `isError: true`
+#### Scenario: Incomplete modern metadata
+- **WHEN** a modern client omits required `_meta` fields in a request
+- **THEN** the SDK rejects the request with an invalid parameters error before executing any Conduit tool handler
 
-#### Scenario: Resultado de llamada legacy
-- **WHEN** una llamada `tools/call` se atiende en el era legacy
-- **THEN** el SDK conserva el formato 2025 y no añade `resultType` de la revisión moderna
+#### Scenario: Clean protocol output
+- **WHEN** the server starts or handles any request
+- **THEN** stdout contains only valid MCP protocol messages and diagnostics are written strictly to stderr
 
-#### Scenario: Metadata moderna incompleta
-- **WHEN** un cliente moderno omite un campo `_meta` obligatorio para una solicitud
-- **THEN** el SDK rechaza la solicitud con un error de parámetros inválidos antes de ejecutar un handler de Conduit
+#### Scenario: Clean transport shutdown
+- **WHEN** the client closes stdin or the process receives SIGINT/SIGTERM
+- **THEN** the server closes the MCP transport and exits cleanly without leaving child processes running
 
-#### Scenario: Schemas de herramientas
-- **WHEN** el cliente solicita `tools/list` en cualquiera de las eras soportadas
-- **THEN** recibe schemas para `provider_status`, `list_models` y `delegate_task`
+#### Scenario: Startup makes no provider calls
+- **WHEN** the server starts or completes discovery/list
+- **THEN** it performs zero network requests to model providers
 
-#### Scenario: Llamada con argumento fuera del schema
-- **WHEN** el cliente MCP incluye parámetros no permitidos por el schema de una herramienta
-- **THEN** Conduit rechaza la llamada antes de contactar al proveedor
+### Requirement: Safe provider status reporting
 
-#### Scenario: Salida de protocolo limpia
-- **WHEN** el servidor inicia o atiende una solicitud
-- **THEN** stdout contiene únicamente mensajes MCP y los diagnósticos se escriben en stderr
+The system SHALL report whether credentials are configured for each supported provider (`openai`, `google`, `anthropic`, `openrouter`, `deepseek`, `groq`, `ollama`) without verifying or exposing secret values.
 
-#### Scenario: Inicio sin llamadas a proveedores
-- **WHEN** el servidor inicia o responde a `server/discover`/`tools/list`
-- **THEN** no realiza solicitudes de red a ningún proveedor
+`provider_status` SHALL accept an empty object and return structured text with `provider`, `configured`, and `credentialSource` for each supported provider. `credentialSource` may only identify the selected environment variable name, never its value.
 
-#### Scenario: Cierre del transporte
-- **WHEN** el cliente cierra stdin o el proceso recibe SIGINT/SIGTERM
-- **THEN** el servidor cierra el transporte MCP y termina sin procesos secundarios
+#### Scenario: Configured API keys
+- **WHEN** an MCP client calls `provider_status`
+- **THEN** the response indicates for each provider whether it is configured and names the detected environment variable without verifying the key
 
-### Requirement: Estado seguro de proveedores
+#### Scenario: No configured keys
+- **WHEN** no supported environment variable is present or non-empty
+- **THEN** the server remains available and reports all providers as not configured
 
-The system SHALL informar si hay credenciales configuradas para cada proveedor soportado (`openai`, `google`, `anthropic`, `openrouter`, `deepseek`, `groq`, `ollama`) sin verificar ni revelar sus valores.
+#### Scenario: Google key alias selection
+- **WHEN** both `GOOGLE_API_KEY` and `GEMINI_API_KEY` are non-empty
+- **THEN** Conduit selects `GOOGLE_API_KEY` and reports that name without revealing either secret value
 
-`provider_status` SHALL aceptar un objeto vacío y devolver un bloque de texto estructurado con `provider`, `configured` y `credentialSource` para cada proveedor. `credentialSource` puede ser el nombre de una variable de entorno, nunca su valor.
+#### Scenario: Ollama base URL detection
+- **WHEN** `OLLAMA_BASE_URL` is defined with a non-empty URL
+- **THEN** Conduit reports `ollama` as configured with `credentialSource: "OLLAMA_BASE_URL"` without requiring an API key
 
-#### Scenario: API keys configuradas
-- **WHEN** el cliente MCP llama `provider_status`
-- **THEN** la respuesta indica si OpenAI, Google, Anthropic, OpenRouter, DeepSeek, Groq y Ollama están configurados, el nombre de la variable seleccionada y que su validez no fue comprobada
+### Requirement: Current model discovery and capabilities
 
-#### Scenario: Ninguna API key configurada
-- **WHEN** no existe ninguna variable de entorno soportada con valor no vacío
-- **THEN** el servidor sigue disponible y `provider_status` informa que todos los proveedores están como no configurados
+The system SHALL retrieve models from the official model catalog of the selected provider and expose capability certainty and cache freshness.
 
-#### Scenario: Alias de API key de Google
-- **WHEN** `GOOGLE_API_KEY` y `GEMINI_API_KEY` tienen valores no vacíos
-- **THEN** Conduit selecciona `GOOGLE_API_KEY` e informa ese nombre sin mostrar ninguno de los valores
+`list_models` SHALL accept `{ provider }` and return objects with `id`, `provider`, `generationSupport`, `fetchedAt`, `cacheAgeSeconds`, and `cacheTtlSeconds`.
 
-#### Scenario: Detección de Ollama por base URL
-- **WHEN** `OLLAMA_BASE_URL` está definida con una URL no vacía
-- **THEN** Conduit informa que `ollama` está configurado con `credentialSource: "OLLAMA_BASE_URL"` sin requerir una API key
+#### Scenario: List models for configured provider
+- **WHEN** an MCP client calls `list_models` for any configured supported provider
+- **THEN** the response contains model objects with `id`, `provider`, `generationSupport`, `fetchedAt`, `cacheAgeSeconds`, and `cacheTtlSeconds`
 
-### Requirement: Descubrimiento de modelos actuales y capacidades
+#### Scenario: OpenAI generation capability unknown
+- **WHEN** the OpenAI catalog does not explicitly establish text generation capability
+- **THEN** Conduit reports `generationSupport: "unknown"` rather than asserting generation support
 
-The system SHALL obtener modelos del catálogo oficial del proveedor seleccionado (`openai`, `google`, `anthropic`, `openrouter`, `deepseek`, `groq`, `ollama`) y exponer la certeza de sus capacidades y la frescura del catálogo.
+#### Scenario: Gemini generation capability confirmed
+- **WHEN** Conduit inspects Google's official model catalog
+- **THEN** it includes only models whose metadata lists `generateContent`, normalizes the ID without `models/`, and marks `generationSupport: "supported"`
 
-`list_models` SHALL aceptar un objeto con `provider` (cualquiera de los 7 proveedores soportados) y devolver una lista de objetos con `id`, `provider`, `generationSupport`, `fetchedAt`, `cacheAgeSeconds` y `cacheTtlSeconds`.
+#### Scenario: OpenAI catalog without cursors
+- **WHEN** Conduit queries OpenAI's `/v1/models` endpoint
+- **THEN** it processes the returned `data` array without inventing cursor-based pagination
 
-#### Scenario: Listar modelos de un proveedor configurado
-- **WHEN** el cliente MCP llama `list_models` para cualquier proveedor soportado configurado
-- **THEN** la respuesta contiene objetos con `id`, `provider`, `generationSupport`, `fetchedAt`, `cacheAgeSeconds` y `cacheTtlSeconds`
+#### Scenario: Official Anthropic catalog
+- **WHEN** Conduit queries `GET https://api.anthropic.com/v1/models`
+- **THEN** it returns models from Anthropic with `generationSupport: "supported"`
 
-#### Scenario: Capacidad OpenAI desconocida
-- **WHEN** el catálogo de OpenAI no confirma que un modelo admita generación de texto
-- **THEN** Conduit informa la capacidad como `unknown` en vez de afirmar que el modelo soporta Responses API
+#### Scenario: Unfiltered OpenRouter catalog
+- **WHEN** Conduit queries OpenRouter's model catalog
+- **THEN** it returns all models provided by the official endpoint without applying restrictive filters
 
-#### Scenario: Capacidad Gemini confirmada
-- **WHEN** Conduit lee el catálogo oficial de Google
-- **THEN** incluye solo modelos cuyo metadata enumera `generateContent`, devuelve el ID sin el prefijo `models/` y marca esa capacidad como soportada
+#### Scenario: Compatible provider capability unknown
+- **WHEN** DeepSeek, Groq, or Ollama catalogs do not explicitly verify generation support
+- **THEN** Conduit reports `generationSupport: "unknown"`
 
-#### Scenario: Catálogo OpenAI sin cursores
-- **WHEN** Conduit consulta el endpoint oficial `/v1/models` de OpenAI
-- **THEN** procesa el array `data` devuelto y no inventa paginación por `has_more` o `last_id`
+#### Scenario: Fresh catalog cache
+- **WHEN** a catalog was fetched within the last 5 minutes
+- **THEN** `list_models` returns the cached catalog with visible freshness metadata
 
-#### Scenario: Catálogo Anthropic oficial
-- **WHEN** Conduit consulta `GET https://api.anthropic.com/v1/models` con `ANTHROPIC_API_KEY`
-- **THEN** devuelve los modelos provistos por Anthropic marcando su capacidad de generación como `supported`
+#### Scenario: Expired catalog cache
+- **WHEN** the cached catalog is older than 5 minutes
+- **THEN** `list_models` refreshes it from the provider's official endpoint before returning
 
-#### Scenario: Catálogo OpenRouter sin filtros restrictivos
-- **WHEN** Conduit consulta el catálogo de OpenRouter
-- **THEN** devuelve todos los modelos retornados por el endpoint oficial sin aplicar filtros ni listas blancas restrictivas
+#### Scenario: Catalog refresh failure
+- **WHEN** an expired catalog cannot be refreshed
+- **THEN** `list_models` returns a sanitized error and does not return stale entries as current
 
-#### Scenario: Capacidad de compatibles desconocida
-- **WHEN** el catálogo de un proveedor compatible (DeepSeek, Groq u Ollama) no establece generación explícita
-- **THEN** Conduit reporta `generationSupport: "unknown"`
+#### Scenario: Catalog request without credentials
+- **WHEN** `list_models` is invoked for an unconfigured provider
+- **THEN** it returns `missing_credentials` without initiating network requests
 
-#### Scenario: Catálogo en caché vigente
-- **WHEN** el catálogo de cualquier proveedor fue obtenido hace no más de cinco minutos
-- **THEN** `list_models` puede devolverlo con metadata visible de frescura
+### Requirement: Explicit prompt delegation
 
-#### Scenario: Catálogo en caché vencido
-- **WHEN** el catálogo tiene más de cinco minutos
-- **THEN** `list_models` lo actualiza desde la API oficial del proveedor antes de presentarlo como vigente
+The system SHALL transmit to the selected provider only the exact prompt supplied to `delegate_task` when the invocation confirms external transfer.
 
-#### Scenario: Error al actualizar catálogo
-- **WHEN** falla la actualización de un catálogo vencido
-- **THEN** `list_models` devuelve un error sanitizado y no presenta datos vencidos como actuales
+`delegate_task` SHALL accept `provider`, `model`, `prompt` (1–100,000 characters), and optional `confirmExternalSend` (must be `true` to execute). It accepts no external URLs, credentials, or custom instructions.
 
-#### Scenario: Catálogo sin credencial
-- **WHEN** `list_models` se llama para un proveedor sin API key o base URL configurada
-- **THEN** devuelve `missing_credentials` y no realiza ninguna solicitud de red
+#### Scenario: Confirmed prompt delegation
+- **WHEN** `delegate_task` receives a supported provider, model ID, valid prompt, and `confirmExternalSend: true`
+- **THEN** Conduit sends only that prompt without added instructions and returns the provider, model, and generated response text
 
-### Requirement: Delegación explícita de tareas de texto
+#### Scenario: Unconfirmed prompt delegation
+- **WHEN** `confirmExternalSend` is missing or false
+- **THEN** Conduit returns `consent_required` and makes no provider request
 
-The system SHALL enviar al proveedor seleccionado únicamente el prompt explícito de `delegate_task` cuando la llamada indique confirmación de transferencia.
+#### Scenario: Anthropic Messages API delegation
+- **WHEN** `delegate_task` targets `anthropic` with valid confirmation
+- **THEN** Conduit sends the prompt via `POST https://api.anthropic.com/v1/messages` with `x-api-key` and `anthropic-version: 2023-06-01`
 
-La entrada de `delegate_task` SHALL aceptar exactamente `provider` (`openai`, `google`, `anthropic`, `openrouter`, `deepseek`, `groq`, `ollama`), `model` (ID devuelto por `list_models`), `prompt` (1–100.000 caracteres) y `confirmExternalSend` (booleano opcional). La llamada solo se ejecuta si el booleano es `true`; no acepta API keys, URLs, headers ni texto de instrucciones adicional.
+#### Scenario: OpenAI-compatible delegation
+- **WHEN** `delegate_task` targets `openrouter`, `deepseek`, `groq`, or `ollama` with valid confirmation
+- **THEN** Conduit sends the prompt via `POST /chat/completions` to the configured endpoint
 
-#### Scenario: Delegación confirmada
-- **WHEN** `delegate_task` recibe un proveedor soportado, ID exacto de modelo, prompt no vacío y `confirmExternalSend: true`
-- **THEN** Conduit envía solo ese prompt sin instrucciones añadidas y devuelve el proveedor, modelo y texto generado
+#### Scenario: Billing and transfer disclosure
+- **WHEN** an MCP client lists `delegate_task`
+- **THEN** its description states that the prompt is sent to the selected provider/model and may incur API charges separate from any subscription
 
-#### Scenario: Delegación no confirmada
-- **WHEN** falta `confirmExternalSend` o su valor es `false`
-- **THEN** Conduit devuelve `consent_required` y no realiza una solicitud al proveedor
+#### Scenario: Host per-call approval
+- **WHEN** an MCP client configures Conduit for `delegate_task`
+- **THEN** it must request human approval per call and show provider, model, and prompt; if unable, it must not enable the tool
 
-#### Scenario: Delegación a Anthropic Messages API
-- **WHEN** `delegate_task` se invoca con `provider: "anthropic"` y confirmación válida
-- **THEN** Conduit envía el prompt mediante `POST https://api.anthropic.com/v1/messages` con los headers `x-api-key` y `anthropic-version: 2023-06-01`
+#### Scenario: Confirmation flag as caller assertion
+- **WHEN** `confirmExternalSend` is `true`
+- **THEN** Conduit treats it as an assertion by the client and does not claim to verify human approval server-side
 
-#### Scenario: Delegación a proveedores compatibles con OpenAI
-- **WHEN** `delegate_task` se invoca con `openrouter`, `deepseek`, `groq` u `ollama` y confirmación válida
-- **THEN** Conduit envía el prompt mediante `POST /chat/completions` hacia el endpoint configurado del proveedor
+#### Scenario: No implicit local context
+- **WHEN** Conduit delegates a task to any provider
+- **THEN** it does not automatically append files, prior turns, environment variables, credentials, or local context
 
-#### Scenario: Aviso de transferencia y coste
-- **WHEN** un cliente MCP lista la herramienta `delegate_task`
-- **THEN** su descripción informa que el prompt se enviará al proveedor/modelo seleccionado, que puede generar cargos API separados de una suscripción y que Conduit no estima precio ni limita gasto
+#### Scenario: Unmodified user prompt
+- **WHEN** Conduit transmits a confirmed prompt
+- **THEN** the request contains exactly the user-supplied prompt without mode templates or system instructions added by Conduit
 
-#### Scenario: Aprobación humana en el host
-- **WHEN** un cliente configura Conduit para usar `delegate_task`
-- **THEN** debe pedir aprobación humana por llamada y mostrar proveedor, modelo exacto y prompt; si no puede hacerlo, no debe habilitar la herramienta
+#### Scenario: Prompt not logged
+- **WHEN** `delegate_task` completes or errors
+- **THEN** the prompt is not written to logs or error messages; a successful result returns provider text and metadata
 
-#### Scenario: Confirmación como afirmación del cliente
-- **WHEN** `confirmExternalSend` es `true`
-- **THEN** Conduit lo trata como afirmación del cliente MCP y no afirma que el servidor pueda verificar quién la estableció
+#### Scenario: Empty or oversized prompt
+- **WHEN** the prompt is empty, whitespace-only, or exceeds 100,000 characters
+- **THEN** Conduit rejects the request before contacting any provider
 
-#### Scenario: Sin contexto local implícito
-- **WHEN** Conduit delega una tarea a cualquiera de los proveedores soportados
-- **THEN** no adjunta automáticamente archivos, turnos previos, variables de entorno, credenciales u otro contexto local
+#### Scenario: Missing provider credentials
+- **WHEN** `delegate_task` targets a provider without configured credentials
+- **THEN** Conduit returns `missing_credentials` without initiating network requests
 
-#### Scenario: Prompt sin modificaciones
-- **WHEN** Conduit envía una delegación confirmada
-- **THEN** la solicitud al proveedor contiene exactamente el prompt recibido, sin plantillas de modo, instrucciones generadas por Conduit ni contexto local añadido
+#### Scenario: Unlisted model
+- **WHEN** `model` does not appear in the recent catalog for that provider
+- **THEN** Conduit returns `unknown_model` without initiating a generation request
 
-#### Scenario: Prompt no se registra
-- **WHEN** `delegate_task` termina correctamente o devuelve un error
-- **THEN** el prompt no se escribe en logs ni aparece en mensajes de error; una respuesta exitosa solo contiene la respuesta del proveedor y metadata
+#### Scenario: Unknown generation support attempt
+- **WHEN** `model` appears in the catalog with `generationSupport: "unknown"`
+- **THEN** Conduit allows the explicit call and returns a sanitized error if the provider rejects generation
 
-#### Scenario: Prompt vacío o excesivo
-- **WHEN** el prompt está vacío, contiene solo espacios o supera 100.000 caracteres
-- **THEN** Conduit lo rechaza antes de contactar al proveedor
+### Requirement: Fixed official endpoints and sanitized errors
 
-#### Scenario: API key ausente
-- **WHEN** `delegate_task` apunta a un proveedor sin API key o base URL configurada
-- **THEN** Conduit devuelve `missing_credentials` y no realiza una solicitud al proveedor
+The system SHALL send requests only to fixed HTTPS origins and documented API endpoints (or validated `OLLAMA_BASE_URL` for local Ollama) and SHALL sanitize all errors returned to MCP clients.
 
-#### Scenario: Modelo no descubierto
-- **WHEN** `model` no aparece en el catálogo reciente de ese proveedor
-- **THEN** Conduit devuelve `unknown_model` y no realiza una solicitud de generación
+#### Scenario: Official provider endpoints
+- **WHEN** Conduit queries catalogs or generation for cloud providers
+- **THEN** it uses only official origins (`api.openai.com`, `generativelanguage.googleapis.com`, `api.anthropic.com`, `openrouter.ai`, `api.deepseek.com`, `api.groq.com`), sends credentials in headers, and rejects redirects
 
-#### Scenario: Capacidad de generación desconocida
-- **WHEN** `model` aparece en el catálogo pero `generationSupport` es `unknown`
-- **THEN** Conduit permite el intento explícito sin cambiar el modelo y devuelve un error sanitizado si el proveedor no admite generación
+#### Scenario: Local Ollama endpoint validation
+- **WHEN** Conduit sends requests to Ollama
+- **THEN** it uses `OLLAMA_BASE_URL` as a fixed base without allowing endpoint overrides or following external redirects
 
-### Requirement: Endpoints oficiales fijos y errores seguros
+#### Scenario: Credentials strictly in headers
+- **WHEN** Conduit sends requests to any provider
+- **THEN** API keys appear only in authorization headers (`Authorization: Bearer` or `x-api-key`), never in URL, query parameters, or body
 
-The system SHALL usar únicamente orígenes HTTPS y endpoints documentados de los proveedores soportados (u `OLLAMA_BASE_URL` validada para Ollama local) y SHALL sanitizar los errores devueltos a clientes MCP.
+#### Scenario: Gemini model path segment
+- **WHEN** Conduit builds the `generateContent` URL for Gemini
+- **THEN** it encodes the ID as a single segment after `models/` without allowing origin or path alteration
 
-#### Scenario: Destinos de proveedor
-- **WHEN** Conduit solicita un catálogo o una respuesta de OpenAI, Google, Anthropic, OpenRouter, DeepSeek o Groq
-- **THEN** usa únicamente sus orígenes oficiales documentados, envía la credencial en un header y rechaza redirects
+#### Scenario: Provider request timeout
+- **WHEN** a provider request exceeds 60 seconds
+- **THEN** Conduit aborts the request and returns `provider_unavailable`
 
-#### Scenario: Validación de endpoint local de Ollama
-- **WHEN** Conduit realiza solicitudes a Ollama
-- **THEN** utiliza `OLLAMA_BASE_URL` como base fija sin permitir reescritura de endpoints en argumentos ni seguir redirecciones externas
+#### Scenario: Provider rate limit
+- **WHEN** a provider returns HTTP 429
+- **THEN** Conduit returns `rate_limited` without retrying through another account
 
-#### Scenario: API key solo en headers
-- **WHEN** Conduit realiza una solicitud a un proveedor externo
-- **THEN** la API key aparece solo en el header de autenticación (`Authorization: Bearer` o `x-api-key`) y nunca en URL, query string o body
+#### Scenario: Provider redirect rejection
+- **WHEN** an official endpoint returns an HTTP redirect
+- **THEN** Conduit rejects the redirect and returns `redirect_blocked` without forwarding credentials
 
-#### Scenario: ID Gemini en la ruta
-- **WHEN** Conduit construye la ruta `generateContent` con un modelo Gemini del catálogo
-- **THEN** codifica el ID como un solo segmento después de `models/` y no permite alterar origen ni ruta
+#### Scenario: Authentication or model rejection
+- **WHEN** a provider returns authentication, authorization, or unsupported-model errors
+- **THEN** Conduit returns `provider_rejected` with a safe status code
 
-#### Scenario: Timeout de proveedor
-- **WHEN** una solicitud a cualquier proveedor supera 60 segundos
-- **THEN** Conduit la aborta y devuelve `provider_unavailable`
+#### Scenario: Network error or malformed response
+- **WHEN** a request times out, fails at network level, or returns malformed data
+- **THEN** Conduit returns `provider_unavailable` or `invalid_response` without raw bodies, URLs, headers, or stack traces
 
-#### Scenario: Límite de proveedor
-- **WHEN** un proveedor devuelve HTTP 429
-- **THEN** Conduit devuelve `rate_limited` y no reintenta con otra cuenta ni afirma haber evadido el límite
+### Requirement: Managed credentials excluded from MCP data
 
-#### Scenario: Redirect del proveedor
-- **WHEN** el endpoint oficial devuelve un redirect HTTP
-- **THEN** Conduit lo rechaza y devuelve `redirect_blocked` sin reenviar credenciales al nuevo destino
+The system SHALL read API keys and base URLs from the process environment and SHALL NOT accept or return credential values in MCP arguments, results, or logs.
 
-#### Scenario: Rechazo de autenticación o modelo
-- **WHEN** un proveedor rechaza autenticación, autorización o el modelo
-- **THEN** Conduit devuelve `provider_rejected` con un código de estado seguro
+#### Scenario: Missing credential error
+- **WHEN** a required credential is missing
+- **THEN** the error names the expected environment variable without displaying any secret value
 
-#### Scenario: Error de red o respuesta inválida
-- **WHEN** una solicitud expira, falla en la red o devuelve datos malformados
-- **THEN** Conduit devuelve una categoría de error estable (`provider_unavailable` o `invalid_response`) sin cuerpos, URLs, headers, prompts, textos de excepción ni stack traces sin sanitizar
+#### Scenario: Sentinel credentials in provider errors
+- **WHEN** a mocked provider error contains a credential sentinel
+- **THEN** the sentinel never appears in stderr or MCP tool results
 
-### Requirement: Credenciales fuera de los datos MCP
-
-The system SHALL leer las API keys o URLs base desde el entorno del proceso y SHALL NOT aceptar ni devolver sus valores en argumentos MCP, resultados o logs.
-
-#### Scenario: Error por credencial ausente
-- **WHEN** falta una credencial requerida
-- **THEN** el error puede nombrar la variable esperada (`OPENAI_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY` u `OLLAMA_BASE_URL`) pero no mostrar su valor
-
-#### Scenario: Secreto centinela en un error del proveedor
-- **WHEN** un error simulado del proveedor incluye un centinela de credencial en cuerpo, URL o headers
-- **THEN** el centinela no aparece en stderr ni en resultados MCP
-
-#### Scenario: La API key nunca aparece en una respuesta normal
-- **WHEN** una llamada MCP usa una API key configurada
-- **THEN** el valor de la clave no aparece en stdout, stderr, metadata ni resultado de herramienta
-
-### Requirement: Herramientas MCP de cuotas y rotación de pool
-
-The system SHALL registrar herramientas MCP en `conduit mcp serve` para consultar cuotas consolidadas del pool, cambiar la cuenta activa y asignar alias amigables.
-
-#### Scenario: Consulta de estado de cuotas vía MCP
-- **WHEN** un cliente MCP llama a `get_quota_status`
-- **THEN** el servidor devuelve la lista de cuentas con sus ventanas de cuota (5h, 7d), porcentajes y tiempos de reinicio sin exponer tokens de autenticación
-
-#### Scenario: Cambio de cuenta activa vía MCP
-- **WHEN** un cliente MCP llama a `switch_account` con un proveedor y número o ID de cuenta válido
-- **THEN** actualiza la cuenta activa en el pool de Conduit y devuelve confirmación sin exponer credenciales
-
-#### Scenario: Asignación de alias vía MCP
-- **WHEN** un cliente MCP llama a `set_account_alias` con un proveedor, número o ID de cuenta y un alias
-- **THEN** persiste el alias en el almacén de Conduit con permisos 0600 y devuelve confirmación
-
-### Requirement: Despacho de subagentes en worktrees aislados vía MCP
-
-The system SHALL registrar la herramienta `dispatch_subagent_task` en `conduit mcp serve` para que cualquier cliente supervisor despache tareas complejas a un subagente que trabaja en un Git Worktree aislado.
-
-#### Scenario: Despacho de subagente con retorno de diff
-- **WHEN** un cliente supervisor invoca `dispatch_subagent_task` con modelo, tarea y `confirmExternalSend: true`
-- **THEN** Conduit ejecuta la tarea en un worktree temporal y devuelve al supervisor el `diff` de git, un resumen estructurado y la lista de archivos modificados
-
-#### Scenario: Confirmación explícita para despacho de subagente
-- **WHEN** se invoca `dispatch_subagent_task` con `confirmExternalSend` ausente o falso
-- **THEN** Conduit devuelve `consent_required` y no inicializa el worktree ni contacta al modelo secundario
-
-#### Scenario: Error controlado en el bucle del subagente
-- **WHEN** el subagente no puede completar la tarea o agota sus pasos
-- **THEN** devuelve el diff acumulado hasta el momento junto con el informe del estado de ejecución para que el supervisor decida los pasos a seguir
+#### Scenario: Credentials absent from normal outputs
+- **WHEN** an MCP tool call succeeds or fails
+- **THEN** credential values never appear in stdout, stderr, metadata, or tool results

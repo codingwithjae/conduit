@@ -68,16 +68,26 @@ Conduit ships with built-in adapters for 7 leading model providers:
 
 ### 1. Installation
 
-Conduit is built with native Node.js ESM and works with any package manager (`pnpm` recommended):
+Install globally via npm or pnpm:
 
 ```bash
-# Clone and build locally
+# Global install via npm
+npm install -g agent-conduit
+
+# Or via pnpm
+pnpm add -g agent-conduit
+
+# Or run instantly without global install
+npx agent-conduit quota
+```
+
+Or clone and build locally:
+
+```bash
 git clone https://github.com/codingwithjae/conduit.git
 cd conduit
 pnpm install
 pnpm run build
-
-# Link binary globally
 pnpm link --global
 ```
 

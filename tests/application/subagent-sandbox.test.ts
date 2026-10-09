@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises"
+import { mkdir, realpath, rm, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { tmpdir } from "node:os"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
@@ -40,6 +40,8 @@ describe("SubagentSandbox and Path Confinement", () => {
   it("runs commands inside the worktree as cwd", async () => {
     const result = await sandbox.runCommand("pwd")
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toBe(tempWorktreeDir)
+    const expectedCwd = await realpath(tempWorktreeDir)
+    const actualCwd = await realpath(result.stdout)
+    expect(actualCwd).toBe(expectedCwd)
   })
 })

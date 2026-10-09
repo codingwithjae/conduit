@@ -1,54 +1,55 @@
-# subagent-runtime Specification
+# Spec
 
 ## Purpose
-Proveer un entorno de ejecución autónomo para subagentes con aislamiento estricto en Git Worktrees temporales, bucle de herramientas de desarrollo acotado y retorno de diff estructurado al agente supervisor.
+
+Provide an autonomous execution runtime for subagents with strict isolation in temporary Git Worktrees, bounded tool loops, and structured diff generation returned to supervisor agents.
 
 ## Requirements
 
-### Requirement: Aislamiento físico de ejecución en Git Worktrees
+### Requirement: Physical execution isolation in Git Worktrees
 
-The system SHALL crear un Git Worktree temporal en `.conduit/worktrees/<task-id>` sobre una rama dedicada `conduit/task-<task-id>` para la ejecución de cada tarea de subagente, garantizando aislamiento total del árbol de trabajo principal.
+The system SHALL create a temporary Git Worktree in `.conduit/worktrees/<task-id>` on a dedicated branch `conduit/task-<task-id>` for each subagent task, guaranteeing complete isolation from the supervisor's active working tree.
 
-#### Scenario: Creación de worktree temporal en rama dedicada
-- **WHEN** se inicia una tarea de subagente
-- **THEN** Conduit crea la rama temporal y añade el worktree aislado en `.conduit/worktrees/<task-id>` a partir de la rama base del repositorio
+#### Scenario: Creation of temporary worktree on dedicated branch
+- **WHEN** a subagent task begins
+- **THEN** Conduit creates a temporary branch and provisions the isolated worktree in `.conduit/worktrees/<task-id>` based on the repository's base branch
 
-#### Scenario: Extracción de git diff y limpieza automática
-- **WHEN** el subagente completa la tarea o agota sus pasos
-- **THEN** Conduit genera el `git diff` de los cambios realizados contra la rama base y elimina el directorio del worktree y su registro de git
+#### Scenario: Git diff extraction and automatic cleanup
+- **WHEN** the subagent completes the task or reaches its step limit
+- **THEN** Conduit generates the unified `git diff` against the base branch and deletes the worktree directory and branch
 
-#### Scenario: Preservación del repositorio principal sin colisiones
-- **WHEN** un subagente edita archivos o ejecuta comandos dentro de su worktree
-- **THEN** los archivos del directorio de trabajo principal del supervisor permanecen intactos y sin modificaciones concurrentes
+#### Scenario: Main repository preservation without collisions
+- **WHEN** a subagent modifies files or runs commands within its worktree
+- **THEN** the supervisor's working directory remains intact with zero concurrent collisions
 
-### Requirement: Bucle agéntico acotado con herramientas de desarrollo
+### Requirement: Bounded agentic tool loop with development sandbox
 
-The system SHALL ejecutar un bucle iterativo de herramientas (*Agentic Tool Loop*) para el subagente acotado a un límite configurable de pasos (15 por defecto).
+The system SHALL execute an iterative tool loop for the subagent bounded by a configurable step limit (default: 15).
 
-#### Scenario: Ejecución de herramientas locales confinadas al worktree
-- **WHEN** el subagente invoca herramientas de lectura, edición o comandos de consola
-- **THEN** las operaciones de escritura y la ejecución de comandos se realizan con el directorio de trabajo (`cwd`) fijado al worktree asignado
+#### Scenario: Local tools confined to worktree
+- **WHEN** the subagent invokes read, write, edit, or shell tools
+- **THEN** write operations and command executions run with the working directory (`cwd`) strictly fixed to the assigned worktree
 
-#### Scenario: Acceso de solo lectura a skills y documentación
-- **WHEN** el subagente consulta skills o archivos de contexto del proyecto
-- **THEN** Conduit permite la lectura de las instrucciones sin otorgar permisos de modificación sobre dichos archivos
+#### Scenario: Read-only access to skills and documentation
+- **WHEN** the subagent inspects repository skills or project context files
+- **THEN** Conduit permits read access to instructions without granting modification permissions over those files
 
-#### Scenario: Guardarraíl de pasos máximos (15 por defecto)
-- **WHEN** el subagente alcanza el número máximo de pasos permitidos (15 por defecto o el valor especificado por el supervisor)
-- **THEN** Conduit finaliza el bucle agéntico de forma ordenada, genera el diff acumulado hasta ese punto y lo devuelve al supervisor
+#### Scenario: Maximum step limit guardrail (default: 15)
+- **WHEN** the subagent reaches the maximum allowed steps (15 by default or as specified by the supervisor)
+- **THEN** Conduit halts the tool loop gracefully, computes the accumulated diff, and returns it to the supervisor
 
-#### Scenario: Bloqueo de escrituras fuera del worktree
-- **WHEN** un subagente intenta escribir o editar una ruta fuera del directorio `.conduit/worktrees/<task-id>`
-- **THEN** Conduit bloquea la operación y devuelve un error de violación de confinamiento sin tocar el archivo
+#### Scenario: Blocking writes outside worktree
+- **WHEN** a subagent attempts to write or edit a path outside `.conduit/worktrees/<task-id>`
+- **THEN** Conduit blocks the operation with a confinement violation error without touching the filesystem
 
-### Requirement: Auto-failover continuo durante el bucle de herramientas
+### Requirement: Continuous auto-failover during tool loop
 
-The system SHALL mantener y propagar el historial de conversación y herramientas acumulado durante el bucle si una cuenta del pool devuelve error HTTP 429, rotando a la siguiente cuenta disponible sin reiniciar la tarea.
+The system SHALL preserve and propagate accumulated conversation and tool history across rate-limit rotations during the subagent loop.
 
-#### Scenario: Rotación de cuenta en caliente ante 429 durante el bucle
-- **WHEN** la llamada al modelo en el paso N del bucle devuelve error 429 y existen otras cuentas disponibles en el pool
-- **THEN** Conduit rota la cuenta activa, reenvía el historial de mensajes acumulado hasta el paso N y continúa el bucle con la nueva cuenta
+#### Scenario: Hot account rotation on 429 during loop
+- **WHEN** a model call at step N of the loop returns HTTP 429 and alternative accounts exist in the pool
+- **THEN** Conduit rotates the active account, forwards the accumulated message history up to step N, and resumes the loop
 
-#### Scenario: Preservación del historial de herramientas al rotar
-- **WHEN** se produce una rotación de cuenta durante el bucle agéntico
-- **THEN** la nueva cuenta recibe todos los resultados de herramientas y turnos previos generados en los pasos anteriores
+#### Scenario: Preservation of tool history across rotation
+- **WHEN** account rotation occurs during the tool loop
+- **THEN** the replacement account receives all prior tool outputs and turns generated in previous steps

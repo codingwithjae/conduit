@@ -1,38 +1,39 @@
-# pool-inference Specification
+# Spec
 
 ## Purpose
-Ejecutar prompts de inferencia directamente desde la CLI mediante cuentas del pool de suscripciones, con prioridad configurable y auto-failover transparente ante límites de cuota (429).
+
+Execute inference prompts directly from the CLI backed by subscription pool accounts, with configurable priority and transparent auto-failover on rate limits (429).
 
 ## Requirements
 
-### Requirement: Inferencia respaldada por el pool de suscripciones
+### Requirement: Inference backed by subscription pools
 
-The system SHALL proporcionar el comando `conduit use <model> <prompt>` para ejecutar inferencia priorizando la cuenta activa del pool de suscripciones del proveedor correspondiente.
+The system SHALL provide the `conduit use <model> <prompt>` command to execute inference prioritizing the active subscription pool account of the corresponding provider.
 
-#### Scenario: Inferencia por defecto con cuenta activa del pool
-- **WHEN** el usuario ejecuta `conduit use <model> <prompt>` y existe una cuenta activa en el pool para ese proveedor
-- **THEN** Conduit ejecuta la inferencia utilizando los tokens de sesión de esa cuenta y muestra la respuesta en consola
+#### Scenario: Default inference using active pool account
+- **WHEN** the user executes `conduit use <model> <prompt>` and an active pool account exists for that provider
+- **THEN** Conduit executes inference using that account's session tokens and displays the response in the terminal
 
-#### Scenario: Forzar uso de API key oficial con flag
-- **WHEN** el usuario ejecuta `conduit use <model> <prompt> --api-key`
-- **THEN** Conduit omite la cuenta del pool y delega la llamada a la API key oficial configurada en las variables de entorno
+#### Scenario: Force official API key with flag
+- **WHEN** the user executes `conduit use <model> <prompt> --api-key`
+- **THEN** Conduit bypasses the pool account and delegates the request to the configured official API key in environment variables
 
-#### Scenario: Sin cuentas en pool ni API key
-- **WHEN** no existen cuentas en el pool para ese proveedor ni API key en el entorno
-- **THEN** Conduit interrumpe la ejecución con un error descriptivo sugiriendo importar cuentas con `conduit account import`
+#### Scenario: No pool accounts and no API key
+- **WHEN** no pool accounts exist for that provider and no API key is configured
+- **THEN** Conduit halts with an actionable error message suggesting running `conduit account import`
 
-### Requirement: Auto-failover transparente ante errores 429
+### Requirement: Transparent auto-failover on rate limits (429)
 
-The system SHALL interceptar respuestas HTTP 429 en la cuenta activa del pool, rotar automáticamente a la siguiente cuenta disponible del pool para ese proveedor y reintentar la solicitud sin interrumpir la operación.
+The system SHALL intercept HTTP 429 rate limit responses on the active pool account, rotate to the next available account in the pool, and retry the request without interrupting the operation.
 
-#### Scenario: Rotación y reintento automático ante límite de tasa
-- **WHEN** la cuenta activa de un proveedor devuelve error 429 durante la ejecución de `conduit use` y existen otras cuentas en el pool
-- **THEN** Conduit marca la cuenta como agotada, rota a la siguiente cuenta disponible, reintenta la solicitud con éxito e informa qué cuenta completó la respuesta
+#### Scenario: Automatic rotation and retry on rate limit
+- **WHEN** the active account of a provider returns HTTP 429 during `conduit use` and other accounts exist in the pool
+- **THEN** Conduit rotates to the next available account, successfully retries the request, and reports which account served the final response
 
-#### Scenario: Agotamiento de todas las cuentas del pool
-- **WHEN** todas las cuentas del pool para ese proveedor devuelven error 429
-- **THEN** Conduit devuelve un error `rate_limited` indicando que todas las cuentas del pool alcanzaron su límite de cuota
+#### Scenario: All pool accounts rate-limited
+- **WHEN** all accounts in the pool for that provider return HTTP 429
+- **THEN** Conduit returns a `rate_limited` error stating that all accounts in the pool have reached their rate limits
 
-#### Scenario: Actualización persistente de la cuenta activa
-- **WHEN** el auto-failover rota con éxito a una nueva cuenta
-- **THEN** actualiza el puntero de cuenta activa en `~/.conduit/pools.json` con permisos `0600`
+#### Scenario: Persistent update of active account
+- **WHEN** auto-failover successfully rotates to a new account
+- **THEN** Conduit updates the active account index in `~/.conduit/pools.json` with strict `0600` permissions
