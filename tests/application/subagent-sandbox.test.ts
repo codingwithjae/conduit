@@ -30,10 +30,10 @@ describe("SubagentSandbox and Path Confinement", () => {
 
   it("blocks path traversal and writes outside the worktree", async () => {
     await expect(sandbox.writeFile("../outside.txt", "Escape attempt")).rejects.toMatchObject({
-      code: "invalid_input",
+      code: "confinement_violation",
     })
     await expect(sandbox.writeFile("/tmp/absolute-outside.txt", "Direct escape")).rejects.toMatchObject({
-      code: "invalid_input",
+      code: "confinement_violation",
     })
   })
 

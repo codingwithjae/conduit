@@ -100,7 +100,7 @@ export class SubagentSandbox {
       resolve(normalizedRoot, relativeOffset) !== resolvedTarget
     ) {
       throw new ConduitError(
-        "invalid_input",
+        "confinement_violation",
         `Path confinement violation: '${targetRelativePath}' attempts to access outside the authorized directory.`,
       )
     }

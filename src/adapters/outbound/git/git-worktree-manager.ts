@@ -36,7 +36,7 @@ export class GitWorktreeManager {
       })
       return { taskId: sanitizedTaskId, worktreePath, branchName }
     } catch (error: unknown) {
-      throw ConduitError.from(error, "provider_unavailable")
+      throw ConduitError.from(error, "invalid_input")
     }
   }
 

@@ -17,18 +17,31 @@ export class FileAccountStore implements AccountStorePort {
   constructor(readonly filePath: string = DEFAULT_POOLS_PATH) {}
 
   async load(): Promise<PoolsState> {
+    let content: string
     try {
-      const content = await readFile(this.filePath, "utf8")
+      content = await readFile(this.filePath, "utf8")
+    } catch (error: unknown) {
+      if ((error as { code?: string }).code === "ENOENT") {
+        const freshState = createInitialPoolsState()
+        await this.save(freshState)
+        return freshState
+      }
+      throw ConduitError.from(error, "storage_not_found")
+    }
+
+    try {
       const parsed = JSON.parse(content) as PoolsState
-      if (parsed.version === 1 && typeof parsed.pools === "object") {
+      if (parsed.version === 1 && typeof parsed.pools === "object" && parsed.pools !== null) {
         return parsed
       }
-    } catch {
-      // Return fresh initial state if file does not exist or is invalid
+      throw new Error("Invalid schema structure")
+    } catch (error: unknown) {
+      throw new ConduitError(
+        "storage_corrupted",
+        `Account pool storage at '${this.filePath}' is corrupted or contains invalid JSON. Please inspect the file manually to prevent data loss.`,
+        error,
+      )
     }
-    const freshState = createInitialPoolsState()
-    await this.save(freshState)
-    return freshState
   }
 
   async save(state: PoolsState): Promise<void> {

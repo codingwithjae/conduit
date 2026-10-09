@@ -10,7 +10,16 @@ export type ConduitErrorCode =
   | "invalid_response"
   | "redirect_blocked"
   | "storage_not_found"
+  | "storage_corrupted"
   | "account_not_found"
+  | "pool_empty"
+  | "not_a_git_repository"
+  | "git_not_found"
+  | "service_offline"
+  | "context_length_exceeded"
+  | "confinement_violation"
+  | "token_expired"
+  | "token_revoked"
 
 export class ConduitError extends Error {
   readonly timestamp: string
@@ -31,12 +40,43 @@ export class ConduitError extends Error {
     }
 
     if (error instanceof Error) {
-      if (error.name === "TimeoutError" || error.message.toLowerCase().includes("timeout")) {
+      const lowerMessage = error.message.toLowerCase()
+
+      if (lowerMessage.includes("not a git repository")) {
+        return new ConduitError(
+          "not_a_git_repository",
+          "Current directory is not a Git repository. Initialize git or run from a git repository.",
+          error,
+        )
+      }
+
+      if (lowerMessage.includes("econnrefused")) {
+        return new ConduitError(
+          "service_offline",
+          "Connection refused. Verify that the local service (e.g. Ollama) is running.",
+          error,
+        )
+      }
+
+      if (lowerMessage.includes("context length") || lowerMessage.includes("maximum context")) {
+        return new ConduitError(
+          "context_length_exceeded",
+          "The prompt exceeds the model's maximum context length.",
+          error,
+        )
+      }
+
+      if (error.name === "TimeoutError" || lowerMessage.includes("timeout")) {
         return new ConduitError("provider_unavailable", "Request timed out.", error)
       }
+
       if ("code" in error && (error as { code?: string }).code === "ENOENT") {
+        if (lowerMessage.includes("git")) {
+          return new ConduitError("git_not_found", "Git executable was not found in system PATH.", error)
+        }
         return new ConduitError("storage_not_found", "Configuration file not found.", error)
       }
+
       return new ConduitError(fallbackCode, error.message, error)
     }
 

@@ -8,7 +8,11 @@ export const asObject = (value: unknown): JsonObject | undefined => {
   return value as JsonObject
 }
 
-const statusError = (status: number): { code: ConduitErrorCode; message: string } => {
+const statusError = (status: number, messageText = ""): { code: ConduitErrorCode; message: string } => {
+  const lower = messageText.toLowerCase()
+  if (lower.includes("context length") || lower.includes("maximum context")) {
+    return { code: "context_length_exceeded", message: "Prompt exceeds the model's maximum context length." }
+  }
   if (status === 429) return { code: "rate_limited", message: "Provider rate limit exceeded." }
   if (status === 401 || status === 403) {
     return { code: "provider_rejected", message: "Provider rejected the credential or request." }
@@ -30,15 +34,27 @@ export const requestJson = async (
       redirect: "manual",
       signal: AbortSignal.timeout(60_000),
     })
-  } catch {
-    throw new ConduitError("provider_unavailable", `${provider} request timed out.`)
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.toLowerCase().includes("econnrefused")) {
+      throw new ConduitError(
+        "service_offline",
+        `Connection to ${provider} was refused. Verify that the local service is running.`,
+        error,
+      )
+    }
+    throw new ConduitError("provider_unavailable", `${provider} request timed out or network failed.`, error)
   }
 
   if (response.status >= 300 && response.status < 400) {
     throw new ConduitError("redirect_blocked", `Conduit blocked a redirect from provider ${provider}.`)
   }
+
   if (!response.ok) {
-    const error = statusError(response.status)
+    let responseText = ""
+    try {
+      responseText = await response.text()
+    } catch {}
+    const error = statusError(response.status, responseText)
     throw new ConduitError(error.code, `${error.message} (HTTP ${response.status})`)
   }
 
