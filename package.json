@@ -4,6 +4,14 @@
   "private": true,
   "description": "A terminal-first, policy-aware model delegation CLI and MCP server.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codingwithjae/conduit.git"
+  },
+  "homepage": "https://github.com/codingwithjae/conduit#readme",
+  "bugs": {
+    "url": "https://github.com/codingwithjae/conduit/issues"
+  },
   "engines": {
     "node": ">=20.19.0"
   },

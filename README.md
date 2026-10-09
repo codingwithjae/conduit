@@ -72,7 +72,7 @@ Conduit is built with native Node.js ESM and works with any package manager (`pn
 
 ```bash
 # Clone and build locally
-git clone https://github.com/conduit-ai/conduit.git
+git clone https://github.com/codingwithjae/conduit.git
 cd conduit
 pnpm install
 pnpm run build
