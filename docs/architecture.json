@@ -9,7 +9,7 @@
       "mode": "auto",
       "entries": {
         "frontend": { "visible": false },
-        "external": { "label": "Supervisor Clients (Claude Code, Codex, Cursor, Kilo)" },
+        "external": { "label": "Supervisor Clients (Claude Code, Codex, Antigravity, Kilo)" },
         "backend": { "label": "Core Engine & Inbound Adapters (MCP / CLI)" },
         "security": { "label": "Secure Storage & Confinement (chmod 0600)" },
         "database": { "label": "Sandboxed Git Worktrees & Local Inference" },
@@ -18,7 +18,7 @@
     }
   },
   "components": [
-    { "id": "clients", "type": "external", "label": "Host Supervisors", "sublabel": "Claude · Codex · Cursor · Kilo", "pos": [40, 260], "size": [150, 64] },
+    { "id": "clients", "type": "external", "label": "Host Supervisors", "sublabel": "Claude · Codex · Antigravity · Kilo", "pos": [40, 260], "size": [150, 64] },
     { "id": "mcp_server", "type": "backend", "label": "MCP Server", "sublabel": "JSON-RPC over stdio", "pos": [260, 180], "size": [160, 64] },
     { "id": "cli_tui", "type": "backend", "label": "CLI & Ink TUI", "sublabel": "quota · account · use", "pos": [260, 340], "size": [160, 64] },
     { "id": "core_router", "type": "backend", "label": "Pool & Failover Engine", "sublabel": "429 auto-rotation", "pos": [490, 260], "size": [170, 64] },
@@ -55,7 +55,7 @@
       "items": [
         "MCP Server: Standard JSON-RPC protocol over stdio for any agent client",
         "CLI & Interactive TUI: Live quota dashboard and account manager in terminal",
-        "Universal Compatibility: Works with Claude Code, Codex CLI, Cursor, and Kilo"
+        "Universal Compatibility: Works with Claude Code, Codex CLI, Antigravity CLI, and Kilo"
       ]
     },
     {

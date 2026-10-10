@@ -10,7 +10,7 @@
 [![MCP](https://img.shields.io/badge/MCP-2026--07--28%20%26%20Legacy-orange)](https://github.com/codingwithjae/conduit/blob/main/docs/mcp-server.md)
 [![OpenSpec](https://img.shields.io/badge/OpenSpec-Validated-success)](https://github.com/codingwithjae/conduit/tree/main/openspec)
 
-Conduit is an agent-agnostic runtime and [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that empowers terminal agents (**Claude Code**, **Codex CLI**, **Antigravity CLI**, **OpenCode**, **Kilo Code**, **Cursor**, **Windsurf**) with:
+Conduit is an agent-agnostic runtime and [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that empowers terminal agents (**Claude Code**, **Codex CLI**, **Antigravity CLI**, **OpenCode**, **Kilo Code**, **Kimi CLI**) with:
 
 1. **Multi-Account Subscription Pooling:** Leverage flat-rate ($20/mo) consumer subscriptions (ChatGPT Plus, Google Antigravity, Claude Pro/Max) across multiple accounts without requiring expensive pay-per-token API keys.
 2. **Transparent 429 Auto-Failover:** When an active account hits its rate limit (HTTP 429), Conduit seamlessly rotates to the next available account in the pool and retries without dropping conversation history or tool context.
@@ -137,18 +137,6 @@ claude mcp add --scope user --transport stdio conduit -- node /absolute/path/to/
 [mcp_servers.conduit]
 command = "node"
 args = ["/absolute/path/to/conduit/bin/conduit.js", "mcp", "serve"]
-```
-
-#### Cursor (`~/.cursor/mcp.json`)
-```json
-{
-  "mcpServers": {
-    "conduit": {
-      "command": "node",
-      "args": ["/absolute/path/to/conduit/bin/conduit.js", "mcp", "serve"]
-    }
-  }
-}
 ```
 
 #### Kilo Code / OpenCode (`opencode.json` / `kilo.json`)

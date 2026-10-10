@@ -1,15 +1,11 @@
-import { existsSync } from "node:fs"
-import { execFile } from "node:child_process"
-import { promisify } from "node:util"
-import { homedir } from "node:os"
 import type { AccountStorePort } from "../ports/account-store.js"
 import type { ModelService } from "./model-service.js"
 import type { ProviderId } from "../ports/model-provider.js"
 import { providerIds } from "../ports/model-provider.js"
 import { ConduitError } from "../ports/conduit-error.js"
 import type { Account } from "../../domain/pool/account.js"
-
-const execFileAsync = promisify(execFile)
+import { GoogleSessionDriver } from "../../adapters/outbound/providers/google-session.js"
+import { OpenAiSessionDriver } from "../../adapters/outbound/providers/openai-session.js"
 
 export interface PoolInferenceInput {
   model: string
@@ -37,11 +33,19 @@ export type AccountInferenceInvoker = (
 ) => Promise<string>
 
 export class PoolInferenceUseCase {
+  private readonly googleSessionDriver: GoogleSessionDriver
+  private readonly openAiSessionDriver: OpenAiSessionDriver
+
   constructor(
     private readonly store: AccountStorePort,
     private readonly modelService: ModelService,
     private readonly accountInvoker?: AccountInferenceInvoker,
-  ) {}
+    googleSessionDriver?: GoogleSessionDriver,
+    openAiSessionDriver?: OpenAiSessionDriver,
+  ) {
+    this.googleSessionDriver = googleSessionDriver || new GoogleSessionDriver()
+    this.openAiSessionDriver = openAiSessionDriver || new OpenAiSessionDriver()
+  }
 
   async execute(input: PoolInferenceInput): Promise<PoolInferenceResult> {
     const cleanPrompt = input.prompt.trim()
@@ -145,13 +149,16 @@ export class PoolInferenceUseCase {
       return this.accountInvoker(account, modelId, prompt)
     }
 
-    const localRunner = this.findLocalRunner()
-    if (localRunner && (account.importedFrom === "antigravity" || account.importedFrom === "codex" || account.importedFrom === "claude-code")) {
-      return this.invokeViaLocalRunner(localRunner, account, modelId, prompt)
+    if (account.provider === "google") {
+      const generatedText = await this.googleSessionDriver.generate(account, modelId, prompt)
+      await this.store.upsertAccount("google", account)
+      return generatedText
     }
 
     if (account.provider === "openai") {
-      return this.invokeOpenAiSession(account, modelId, prompt)
+      const generatedText = await this.openAiSessionDriver.generate(account, modelId, prompt)
+      await this.store.upsertAccount("openai", account)
+      return generatedText
     }
 
     return (
@@ -162,122 +169,6 @@ export class PoolInferenceUseCase {
         confirmExternalSend: true,
       })
     ).text
-  }
-
-  private findLocalRunner(): string | null {
-    if (process.env.KILO_BIN && existsSync(process.env.KILO_BIN)) return process.env.KILO_BIN
-    const candidates = [
-      `${homedir()}/.local/share/pnpm/kilo`,
-      "/usr/local/bin/kilo",
-      "/usr/bin/kilo",
-    ]
-    for (const candidate of candidates) {
-      if (existsSync(candidate)) return candidate
-    }
-    return null
-  }
-
-  private async invokeViaLocalRunner(
-    runnerPath: string,
-    account: Account,
-    modelId: string,
-    prompt: string,
-  ): Promise<string> {
-    let resolvedModelId = modelId
-    if (account.provider === "google" && !modelId.startsWith("antigravity-")) {
-      resolvedModelId = `antigravity-${modelId}`
-    }
-    const fullModelRef = `${account.provider}/${resolvedModelId}`
-
-    try {
-      const { stdout } = await execFileAsync(
-        runnerPath,
-        ["run", "--model", fullModelRef, "--agent", "ask", "--format", "default", "--", prompt],
-        {
-          cwd: process.cwd(),
-          timeout: 120_000,
-        },
-      )
-      const cleanText = stdout.replace(/^\s*>.*$/m, "").trim()
-      if (!cleanText) {
-        throw new ConduitError("invalid_response", `${account.provider} returned an empty response.`)
-      }
-      return cleanText
-    } catch (error: any) {
-      const errText = String(error?.stderr || error?.message || "")
-      if (errText.includes("429") || errText.toLowerCase().includes("rate limit") || errText.toLowerCase().includes("exhausted")) {
-        throw new ConduitError("rate_limited", `Rate limit on ${account.provider} account ${account.email}`)
-      }
-      if (errText.includes("Did you mean: antigravity-")) {
-        if (!resolvedModelId.startsWith("antigravity-")) {
-          return this.invokeViaLocalRunner(runnerPath, account, `antigravity-${modelId}`, prompt)
-        }
-      }
-      throw ConduitError.from(error, "provider_rejected")
-    }
-  }
-
-  private async invokeOpenAiSession(account: Account, modelId: string, prompt: string): Promise<string> {
-    let accessToken = account.tokens.access
-    const expiresAtMs = account.tokens.expiresAt
-    const isTokenExpired = !accessToken || (expiresAtMs && expiresAtMs < Date.now() + 30_000)
-
-    if (isTokenExpired && account.tokens.refresh) {
-      try {
-        const refreshResponse = await fetch("https://auth.openai.com/oauth/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "refresh_token",
-            refresh_token: account.tokens.refresh,
-            client_id: "app_EMoamEEZ73f0CkXaXp7hrann",
-          }).toString(),
-        })
-        if (refreshResponse.ok) {
-          const payload = (await refreshResponse.json()) as { access_token?: string; refresh_token?: string; expires_in?: number }
-          if (payload.access_token) {
-            accessToken = payload.access_token
-            account.tokens.access = accessToken
-            account.tokens.refresh = payload.refresh_token || account.tokens.refresh
-            account.tokens.expiresAt = Date.now() + (payload.expires_in || 3600) * 1000
-            await this.store.upsertAccount("openai", account)
-          }
-        }
-      } catch {
-        // Fall back to existing token if refresh call fails
-      }
-    }
-
-    if (!accessToken) {
-      throw new ConduitError("missing_credentials", "No valid access token available for OpenAI account.")
-    }
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: modelId,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    })
-
-    if (response.status === 429) {
-      throw new ConduitError("rate_limited", "OpenAI rate limit exceeded")
-    }
-
-    if (!response.ok) {
-      throw new ConduitError("provider_rejected", `OpenAI returned HTTP ${response.status}`)
-    }
-
-    const body = (await response.json()) as any
-    const content = body.choices?.[0]?.message?.content
-    if (typeof content !== "string") {
-      throw new ConduitError("invalid_response", "OpenAI response was empty")
-    }
-    return content
   }
 
   resolveProviderAndModel(rawModelString: string): { providerId: ProviderId; modelId: string } {

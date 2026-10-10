@@ -8,7 +8,7 @@ Execute inference prompts directly from the CLI backed by subscription pool acco
 
 ### Requirement: Inference backed by subscription pools
 
-The system SHALL provide the `conduit use <model> <prompt>` command to execute inference prioritizing the active subscription pool account of the corresponding provider.
+The system SHALL provide the `conduit use <model> <prompt>` command to execute inference prioritizing the active subscription pool account of the corresponding provider using native, autonomous HTTP session drivers.
 
 #### Scenario: Default inference using active pool account
 - **WHEN** the user executes `conduit use <model> <prompt>` and an active pool account exists for that provider
@@ -21,6 +21,18 @@ The system SHALL provide the `conduit use <model> <prompt>` command to execute i
 #### Scenario: No pool accounts and no API key
 - **WHEN** no pool accounts exist for that provider and no API key is configured
 - **THEN** Conduit halts with an actionable error message suggesting running `conduit account import`
+
+#### Scenario: Google Antigravity autonomous token exchange and execution
+- **WHEN** an active Google Antigravity pool account is invoked
+- **THEN** Conduit exchanges its refresh token with `https://oauth2.googleapis.com/token` to obtain an ephemeral Bearer token and calls the official Gemini `generateContent` endpoint using `Authorization: Bearer <token>` natively via HTTP
+
+#### Scenario: OpenAI session autonomous token refresh and execution
+- **WHEN** an active OpenAI pool account is invoked
+- **THEN** Conduit refreshes the session token via `https://auth.openai.com/oauth/token` if expired and invokes generation directly via HTTP headers
+
+#### Scenario: Zero external agent dependencies
+- **WHEN** any pool account executes inference
+- **THEN** Conduit performs the request using native Node.js HTTP `fetch` without invoking, checking, or depending on third-party agent CLIs or filesystem paths
 
 ### Requirement: Transparent auto-failover on rate limits (429)
 

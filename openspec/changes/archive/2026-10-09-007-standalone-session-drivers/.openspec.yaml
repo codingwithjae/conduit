@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-10-09
+goal: Ejecutar inferencia directamente vía llamadas HTTP estándar mediante
+  intercambio de tokens OAuth y endpoints oficiales de generación, con cero
+  dependencias de agentes externos

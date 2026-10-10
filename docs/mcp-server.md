@@ -1,6 +1,6 @@
 # Conduit MCP Server
 
-Conduit exposes standard Model Context Protocol (MCP) tools over `stdio` to any compatible client (Claude Code, Codex CLI, Antigravity CLI, Cursor, Windsurf, OpenCode, Kilo Code, etc.). The server runs as a local child process without opening external network ports or requiring third-party agent CLIs.
+Conduit exposes standard Model Context Protocol (MCP) tools over `stdio` to any compatible terminal client (Claude Code, Codex CLI, Antigravity CLI, OpenCode, Kilo Code, Kimi CLI, etc.). The server runs as a local child process without opening external network ports or requiring third-party agent CLIs.
 
 ## Prerequisites
 
@@ -54,18 +54,6 @@ claude mcp add --scope user --transport stdio conduit -- node /absolute/path/to/
 [mcp_servers.conduit]
 command = "node"
 args = ["/absolute/path/to/conduit/bin/conduit.js", "mcp", "serve"]
-```
-
-### Cursor (`~/.cursor/mcp.json`)
-```json
-{
-  "mcpServers": {
-    "conduit": {
-      "command": "node",
-      "args": ["/absolute/path/to/conduit/bin/conduit.js", "mcp", "serve"]
-    }
-  }
-}
 ```
 
 ### OpenCode / Kilo Code (`opencode.json` / `kilo.json`)

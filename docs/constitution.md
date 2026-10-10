@@ -1,6 +1,6 @@
 # Conduit Constitution
 
-Version: 1.1  
+Version: 1.2  
 Status: Active
 
 This constitution governs all product, architecture, security, and contribution decisions for Conduit. If any proposal or implementation conflicts with this document, the proposal must be amended or the constitution explicitly revised through a formal, documented decision.
@@ -13,14 +13,17 @@ Conduit does not replace the host agent (Claude Code, Codex CLI, Antigravity CLI
 
 ## 2. Core Principles
 
+### P0. The SDD Golden Rule: NO SE TOCA EL CÓDIGO HASTA QUE SE DEFINA UNA SPEC
+Code is strictly an artifact of the specification. It is absolutely forbidden to modify production code, introduce temporary execution shims, or take shortcuts before a change has a validated OpenSpec proposal (`proposal.md`), functional requirements in EARS notation (`spec.md`), architectural design (`design.md`), and atomic tasks (`tasks.md`). Unexpected runtime issues or bugs must immediately halt execution, trigger conceptual exploration, and be formally specified before altering any codebase file.
+
 ### P1. Spec-Driven Development (SDD)
 All functional and product changes follow the OpenSpec specification-driven methodology. Unclear requirements must be explored before drafting proposals. Every change must establish observable functional requirements (in EARS notation), concrete scenarios, architectural design, and atomic tasks before implementation starts.
 
 ### P2. Terminal-First
 Core capabilities must remain accessible and ergonomic within standard terminal environments. Phase one avoids heavy graphical dependencies and background web servers. Standard input/output (`stdio`) is the primary local transport for MCP clients.
 
-### P3. Client and Provider Agnosticism
-Conduit's core domain does not depend on Kilo, OpenCode, Claude Code, Codex, Antigravity, or any specific host CLI. Host integrations are thin, stateless adapters. Providers are decoupled behind explicit interfaces; individual provider quirks must never leak into the core domain.
+### P3. Strict Client and Provider Agnosticism
+Conduit's core domain and runtime must remain completely autonomous and agnostic. It is strictly forbidden to embed hardcoded paths, environment variables (`KILO_BIN`), or runtime execution hooks to Kilo, OpenCode, Claude Code, Codex, Antigravity, or any external agent tool in Conduit source code. All inference drivers must operate via standard HTTP protocols and native Node.js APIs.
 
 ### P4. Policy Compliance and Safe Boundaries
 Conduit prioritizes official, documented APIs and authentication methods. It must never spoof third-party client identifiers, exploit undocumented internal web endpoints, or perform automated account rotation intended to bypass subscription terms of service. Experimental adapters require explicit user opt-in and clear risk documentation.
@@ -46,3 +49,4 @@ The project avoids mandatory dependencies on external runtime agents. Node.js wi
 
 - **1.0 (2026-10-07):** Initial project constitution.
 - **1.1 (2026-10-07):** P5 amended to allow explicit, user-confirmed prompt transmission to designated providers for `delegate_task` and `dispatch_subagent_task`.
+- **1.2 (2026-10-10):** P0 added as the SDD Golden Rule ("NO SE TOCA EL CÓDIGO HASTA QUE SE DEFINA UNA SPEC"); P3 reinforced to strictly prohibit runtime dependencies, binary lookups, or execution shims to external agents (Kilo, OpenCode, Codex).

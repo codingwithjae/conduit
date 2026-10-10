@@ -4,6 +4,8 @@ Read and adhere strictly to `docs/constitution.md` before planning or implementi
 
 ## SDD Workflow
 
+- **P0 Rule (Inviolable):** NO SE TOCA EL CÓDIGO HASTA QUE SE DEFINA UNA SPEC. Never write or edit production code, create execution shims, or take implementation shortcuts before a change is formally proposed, designed, and strictly validated in OpenSpec.
+- **P3 Rule (Strict Agnosticism):** Never embed paths, binary lookups, or runtime dependencies to external agent tools (e.g. Kilo, OpenCode, Codex) in Conduit code. All drivers must be autonomous, native, and portable.
 - When requirements or architectural details are unclear, explore the repository and run `/opsx:explore`.
 - For any new feature or behavior change, draft a formal OpenSpec proposal using `/opsx:propose`. Review the `proposal.md`, `specs/`, `design.md`, and `tasks.md` before writing code.
 - Implement only approved tasks from `tasks.md` using `/opsx:apply`, completing one atomic task at a time following TDD.
