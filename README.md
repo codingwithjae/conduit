@@ -10,6 +10,10 @@
 [![MCP](https://img.shields.io/badge/MCP-2026--07--28%20%26%20Legacy-orange)](https://github.com/codingwithjae/conduit/blob/main/docs/mcp-server.md)
 [![OpenSpec](https://img.shields.io/badge/OpenSpec-Validated-success)](https://github.com/codingwithjae/conduit/tree/main/openspec)
 
+> **⚠️ Experimental — Use at Your Own Risk**
+>
+> Conduit's subscription session import feature reads locally cached OAuth tokens from Antigravity, ChatGPT Plus, and Claude Pro/Max. These tokens were issued for their respective consumer apps — reusing them through a third-party tool may violate provider Terms of Service and could result in account suspension. This feature is provided for local development experimentation only. **You assume all responsibility for how you use imported credentials.** Standard API key mode (`--api-key` or environment variables) is fully ToS-compliant and recommended for production use.
+
 Conduit is an agent-agnostic runtime and [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that empowers terminal agents (**Claude Code**, **Codex CLI**, **Antigravity CLI**, **OpenCode**, **Kilo Code**, **Kimi CLI**) with:
 
 1. **Multi-Account Subscription Pooling:** Leverage flat-rate ($20/mo) consumer subscriptions (ChatGPT Plus, Google Antigravity, Claude Pro/Max) across multiple accounts without requiring expensive pay-per-token API keys.
