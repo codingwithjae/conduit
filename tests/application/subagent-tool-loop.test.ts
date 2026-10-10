@@ -41,14 +41,14 @@ describe("SubagentToolLoop", () => {
         if (callCount === 1) {
           return {
             provider: "openai",
-            model: "gpt-4o",
+            model: "gpt-6-luna",
             text: '{"action": "write_file", "path": "feature.txt", "content": "Subagent created this\\n"}',
             accountUsed: { email: "plus@chatgpt.com" },
           }
         }
         return {
           provider: "openai",
-          model: "gpt-4o",
+          model: "gpt-6-luna",
           text: '{"action": "finish", "summary": "Feature successfully added."}',
           accountUsed: { email: "plus@chatgpt.com" },
         }
@@ -58,7 +58,7 @@ describe("SubagentToolLoop", () => {
     const loop = new SubagentToolLoop(worktreeManager, mockPoolInference)
     const result = await loop.executeTask({
       taskId: "task_1",
-      model: "gpt-4o",
+      model: "gpt-6-luna",
       taskDescription: "Create feature.txt",
       repoRoot: tempRepoDir,
     })
@@ -75,7 +75,7 @@ describe("SubagentToolLoop", () => {
     const mockPoolInference = {
       execute: vi.fn(async () => ({
         provider: "google",
-        model: "gemini-2.5-pro",
+        model: "gemini-3.8-flash",
         text: '{"action": "run_command", "command": "echo looping"}',
         accountUsed: { email: "acc@gmail.com" },
       })),
@@ -84,7 +84,7 @@ describe("SubagentToolLoop", () => {
     const loop = new SubagentToolLoop(worktreeManager, mockPoolInference)
     const result = await loop.executeTask({
       taskId: "task_bound",
-      model: "gemini-2.5-pro",
+      model: "gemini-3.8-flash",
       taskDescription: "Looping task",
       maxSteps: 3,
       repoRoot: tempRepoDir,

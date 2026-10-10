@@ -42,7 +42,7 @@ describe("PoolInferenceUseCase and Auto-Failover", () => {
     const useCase = new PoolInferenceUseCase(store, mockModelService, invoker)
 
     const result = await useCase.execute({
-      model: "gpt-4o",
+      model: "gpt-6-luna",
       prompt: "Hello pool",
     })
 
@@ -63,7 +63,7 @@ describe("PoolInferenceUseCase and Auto-Failover", () => {
     const useCase = new PoolInferenceUseCase(store, mockModelService, invoker)
 
     const result = await useCase.execute({
-      model: "openai/gpt-4o",
+      model: "openai/gpt-6-luna",
       prompt: "Hello API",
       forceApiKey: true,
     })
@@ -97,7 +97,7 @@ describe("PoolInferenceUseCase and Auto-Failover", () => {
 
     const useCase = new PoolInferenceUseCase(store, mockModelService, invoker)
     const result = await useCase.execute({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.8-flash",
       prompt: "Execute task",
     })
 
@@ -134,7 +134,7 @@ describe("PoolInferenceUseCase and Auto-Failover", () => {
 
     await expect(
       useCase.execute({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         prompt: "Execute task",
       }),
     ).rejects.toMatchObject({
@@ -167,7 +167,7 @@ describe("PoolInferenceUseCase and Auto-Failover", () => {
 
     await expect(
       useCase.execute({
-        model: "gpt-4o",
+        model: "gpt-6-luna",
         prompt: "Bad request",
       }),
     ).rejects.toMatchObject({
@@ -175,5 +175,26 @@ describe("PoolInferenceUseCase and Auto-Failover", () => {
     })
 
     expect(invoker).toHaveBeenCalledTimes(1) // Did not rotate!
+  })
+
+  it("resolves model strings to appropriate providers", () => {
+    const useCase = new PoolInferenceUseCase(store, mockModelService)
+
+    expect(useCase.resolveProviderAndModel("luna-6.0")).toEqual({
+      providerId: "openai",
+      modelId: "luna-6.0",
+    })
+    expect(useCase.resolveProviderAndModel("claude-sonnet-5.5")).toEqual({
+      providerId: "anthropic",
+      modelId: "claude-sonnet-5.5",
+    })
+    expect(useCase.resolveProviderAndModel("gemini-3.8-flash")).toEqual({
+      providerId: "google",
+      modelId: "gemini-3.8-flash",
+    })
+    expect(useCase.resolveProviderAndModel("openrouter/anthropic/claude-sonnet-5.5")).toEqual({
+      providerId: "openrouter",
+      modelId: "anthropic/claude-sonnet-5.5",
+    })
   })
 })

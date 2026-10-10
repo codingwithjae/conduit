@@ -19,23 +19,23 @@ describe("Conduit CLI use command", () => {
     const mockUseCase = {
       execute: vi.fn(async () => ({
         provider: "openai",
-        model: "gpt-4o",
-        text: "Response from pool GPT-4o",
+        model: "gpt-6-luna",
+        text: "Response from pool GPT-6 Luna",
         accountUsed: { id: "oa_1", email: "user@chatgpt.com", alias: "Personal Plus" },
       })),
     } as unknown as PoolInferenceUseCase
 
     const out = captureOutput()
-    const exitCode = await runCli(["use", "gpt-4o", "Solve", "this", "bug"], {
+    const exitCode = await runCli(["use", "gpt-6-luna", "Solve", "this", "bug"], {
       output: out.io,
       poolInferenceUseCase: mockUseCase,
     })
 
     expect(exitCode).toBe(0)
-    expect(out.read().stdout).toBe("Response from pool GPT-4o\n")
-    expect(out.read().stderr).toContain("Model: openai/gpt-4o · Account: Personal Plus (user@chatgpt.com)")
+    expect(out.read().stdout).toBe("Response from pool GPT-6 Luna\n")
+    expect(out.read().stderr).toContain("Model: openai/gpt-6-luna · Account: Personal Plus (user@chatgpt.com)")
     expect(mockUseCase.execute).toHaveBeenCalledWith({
-      model: "gpt-4o",
+      model: "gpt-6-luna",
       prompt: "Solve this bug",
       forceApiKey: false,
     })
@@ -45,13 +45,13 @@ describe("Conduit CLI use command", () => {
     const mockUseCase = {
       execute: vi.fn(async () => ({
         provider: "google",
-        model: "gemini-2.5-pro",
+        model: "gemini-3.8-flash",
         text: "Official API response",
       })),
     } as unknown as PoolInferenceUseCase
 
     const out = captureOutput()
-    const exitCode = await runCli(["use", "gemini-2.5-pro", "hello", "--api-key"], {
+    const exitCode = await runCli(["use", "gemini-3.8-flash", "hello", "--api-key"], {
       output: out.io,
       poolInferenceUseCase: mockUseCase,
     })
@@ -59,7 +59,7 @@ describe("Conduit CLI use command", () => {
     expect(exitCode).toBe(0)
     expect(out.read().stdout).toBe("Official API response\n")
     expect(mockUseCase.execute).toHaveBeenCalledWith({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.8-flash",
       prompt: "hello",
       forceApiKey: true,
     })
@@ -69,7 +69,7 @@ describe("Conduit CLI use command", () => {
     const mockUseCase = {
       execute: vi.fn(async () => ({
         provider: "google",
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         text: "Success after rotation",
         accountUsed: { id: "g_2", email: "user2@gmail.com" },
         rotatedFromAccounts: ["user1@gmail.com"],
@@ -77,7 +77,7 @@ describe("Conduit CLI use command", () => {
     } as unknown as PoolInferenceUseCase
 
     const out = captureOutput()
-    const exitCode = await runCli(["use", "gemini-2.5-flash", "test"], {
+    const exitCode = await runCli(["use", "gemini-3.8-flash", "test"], {
       output: out.io,
       poolInferenceUseCase: mockUseCase,
     })

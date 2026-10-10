@@ -29,19 +29,19 @@ describe("Conduit CLI dispatch command", () => {
     } as unknown as SubagentToolLoop
 
     const out = captureOutput()
-    const exitCode = await runCli(["dispatch", "gpt-4o", "Create", "feature"], {
+    const exitCode = await runCli(["dispatch", "gpt-6-luna", "Create", "feature"], {
       output: out.io,
       subagentLoop: mockLoop,
     })
 
     expect(exitCode).toBe(0)
     expect(out.read().stdout).toContain("diff --git a/file.txt b/file.txt")
-    expect(out.read().stderr).toContain("Provisioning isolated Git Worktree for subagent (gpt-4o)")
+    expect(out.read().stderr).toContain("Provisioning isolated Git Worktree for subagent (gpt-6-luna)")
     expect(out.read().stderr).toContain("Created new feature file. (Steps completed: 3)")
     expect(out.read().stderr).toContain("Modified files: file.txt")
     expect(mockLoop.executeTask).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: "gpt-4o",
+        model: "gpt-6-luna",
         taskDescription: "Create feature",
         maxSteps: 15,
       }),
@@ -61,7 +61,7 @@ describe("Conduit CLI dispatch command", () => {
     } as unknown as SubagentToolLoop
 
     const out = captureOutput()
-    const exitCode = await runCli(["dispatch", "gemini-2.5-pro", "Quick", "fix", "--max-steps", "5"], {
+    const exitCode = await runCli(["dispatch", "gemini-3.8-flash", "Quick", "fix", "--max-steps", "5"], {
       output: out.io,
       subagentLoop: mockLoop,
     })

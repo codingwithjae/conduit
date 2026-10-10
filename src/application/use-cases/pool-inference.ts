@@ -228,7 +228,15 @@ export class PoolInferenceUseCase {
     }
 
     const lower = trimmed.toLowerCase()
-    if (lower.startsWith("gpt") || lower.startsWith("o1") || lower.startsWith("o3") || lower.startsWith("o4")) {
+    if (
+      lower.startsWith("gpt") ||
+      lower.startsWith("luna") ||
+      lower.startsWith("sol") ||
+      lower.startsWith("o1") ||
+      lower.startsWith("o3") ||
+      lower.startsWith("o4") ||
+      lower.startsWith("o5")
+    ) {
       return { providerId: "openai", modelId: trimmed }
     }
     if (lower.startsWith("gemini") || lower.startsWith("antigravity")) {
@@ -240,7 +248,7 @@ export class PoolInferenceUseCase {
     if (lower.startsWith("deepseek")) {
       return { providerId: "deepseek", modelId: trimmed }
     }
-    if (lower.startsWith("groq") || lower.startsWith("llama")) {
+    if (lower.startsWith("groq") || lower.startsWith("llama") || lower.startsWith("nemotron")) {
       return { providerId: "groq", modelId: trimmed }
     }
 

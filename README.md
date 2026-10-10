@@ -12,7 +12,7 @@ Conduit is an agent-agnostic runtime and [Model Context Protocol (MCP)](https://
 
 1. **Multi-Account Subscription Pooling:** Leverage flat-rate ($20/mo) consumer subscriptions (ChatGPT Plus, Google Antigravity, Claude Pro/Max) across multiple accounts without requiring expensive pay-per-token API keys.
 2. **Transparent 429 Auto-Failover:** When an active account hits its rate limit (HTTP 429), Conduit seamlessly rotates to the next available account in the pool and retries without dropping conversation history or tool context.
-3. **Autonomous Subagent Git Worktrees:** Dispatches secondary models (GPT-4o, Gemini 2.5 Pro, DeepSeek R1) into isolated Git Worktrees (`.conduit/worktrees/<task-id>`) where subagents can read, edit, and run local test suites in a sandbox—returning a clean `git diff` for review with zero branch collisions.
+3. **Autonomous Subagent Git Worktrees:** Dispatches secondary models (GPT-6 Luna, Claude Sonnet 5.5, Gemini Flash 3.8, DeepSeek R1) into isolated Git Worktrees (`.conduit/worktrees/<task-id>`) where subagents can read, edit, and run local test suites in a sandbox—returning a clean `git diff` for review with zero branch collisions.
 4. **Universal Non-Destructive Importer:** Imports existing sessions from Antigravity, Codex, and Claude Code in seconds with read-only operations that never alter original files.
 5. **Interactive Live TUI Dashboard:** A real-time terminal UI built with [Ink](https://github.com/vadimdemedes/ink) (React for the terminal) featuring live second-by-second reset countdowns, visual progress bars, and keyboard navigation.
 
@@ -20,31 +20,13 @@ Conduit is an agent-agnostic runtime and [Model Context Protocol (MCP)](https://
 
 ## Architecture Overview
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                   ANY SUPERVISOR / HOST AGENT                          │
-│     Claude Code · Codex CLI · Antigravity CLI · OpenCode · Cursor      │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ (Standard MCP via stdio / CLI)
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                              CONDUIT                                   │
-│                                                                        │
-│  ┌───────────────────────┐  ┌──────────────────┐  ┌─────────────────┐  │
-│  │   Git Worktree Engine │  │  Pool Failover   │  │ Model Discovery │  │
-│  │  - Isolated branches  │  │  - Transparent   │  │  - 7 providers  │  │
-│  │  - Sandboxed tool loop│  │    429 rotation  │  │  - 5-min cache  │  │
-│  │  - Structured diff out│  │  - 5h/7d sliding │  │  - Strict Zod   │  │
-│  └───────────────────────┘  └──────────────────┘  └─────────────────┘  │
-└──────────────────────┬───────────────────────┬─────────────────────────┘
-                       │                       │
-                       ▼                       ▼
-            [ SUBSCRIPTION POOLS ]   [ OFFICIAL API KEYS ]
-            ~/.conduit/pools.json     OpenAI, Google, Anthropic,
-            (chmod 0600 secure)       OpenRouter, DeepSeek, Groq, Ollama
-```
-
-*Interactive system diagram:* Open [`docs/architecture.html`](docs/architecture.html) in your browser to inspect components, boundaries, and data flow paths (rendered with [Archify](https://github.com/tt-a1i/archify)).
+<p align="center">
+  <a href="docs/architecture.html">
+    <img src="docs/conduit-system.png" alt="Conduit System Architecture Diagram" width="100%" />
+  </a>
+  <br />
+  <em>Interactive architecture diagram generated with <a href="https://github.com/tt-a1i/archify">Archify</a>. Open <a href="docs/architecture.html">docs/architecture.html</a> to inspect components and animate request paths.</em>
+</p>
 
 ---
 
@@ -114,16 +96,19 @@ conduit quota
 
 ```bash
 # Uses the active subscription account from the pool by default:
-conduit use gpt-4o "Refactor this function to be thread-safe"
+conduit use gpt-6-luna "Refactor this function to be thread-safe"
+
+# Or execute with Claude Sonnet 5.5:
+conduit use claude-sonnet-5.5 "Audit this authentication middleware"
 
 # Force official API key if preferred:
-conduit use gemini-2.5-pro "Analyze this data structure" --api-key
+conduit use gemini-3.8-flash "Analyze this data structure" --api-key
 ```
 
 ### 5. Autonomous Subagent Dispatch (Isolated Git Worktree)
 
 ```bash
-conduit dispatch gpt-4o "Implement JWT middleware and add automated tests" --max-steps 15
+conduit dispatch gpt-6-luna "Implement JWT middleware and add automated tests" --max-steps 15
 ```
 
 Conduit provisions `.conduit/worktrees/<task-id>`, sets up a sandboxed tool loop (read, edit, test), and outputs the resulting unified `git diff` upon completion.
