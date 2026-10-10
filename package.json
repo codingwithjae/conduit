@@ -5,7 +5,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codingwithjae/conduit.git"
+    "url": "git+https://github.com/codingwithjae/conduit.git"
   },
   "homepage": "https://github.com/codingwithjae/conduit#readme",
   "bugs": {
@@ -15,7 +15,7 @@
     "node": ">=20.19.0"
   },
   "bin": {
-    "conduit": "./bin/conduit.js"
+    "conduit": "bin/conduit.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
