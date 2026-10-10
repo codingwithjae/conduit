@@ -1,12 +1,14 @@
-# Conduit
+# Conduit (`agent-conduit`)
 
 > **Terminal-first, provider-agnostic model delegation & subscription pooling runtime.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20NodeNext-blue?logo=typescript)](tsconfig.json)
-[![Vitest](https://img.shields.io/badge/Vitest-78%20passed-brightgreen?logo=vitest)](tests/)
-[![MCP](https://img.shields.io/badge/MCP-2026--07--28%20%26%20Legacy-orange)](docs/mcp-server.md)
-[![OpenSpec](https://img.shields.io/badge/OpenSpec-Validated-success)](openspec/)
+[![npm version](https://img.shields.io/npm/v/agent-conduit.svg)](https://www.npmjs.com/package/agent-conduit)
+[![npm downloads](https://img.shields.io/npm/dm/agent-conduit.svg)](https://www.npmjs.com/package/agent-conduit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/codingwithjae/conduit/blob/main/LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20NodeNext-blue?logo=typescript)](https://github.com/codingwithjae/conduit)
+[![Vitest](https://img.shields.io/badge/Vitest-85%20passed-brightgreen?logo=vitest)](https://github.com/codingwithjae/conduit)
+[![MCP](https://img.shields.io/badge/MCP-2026--07--28%20%26%20Legacy-orange)](https://github.com/codingwithjae/conduit/blob/main/docs/mcp-server.md)
+[![OpenSpec](https://img.shields.io/badge/OpenSpec-Validated-success)](https://github.com/codingwithjae/conduit/tree/main/openspec)
 
 Conduit is an agent-agnostic runtime and [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that empowers terminal agents (**Claude Code**, **Codex CLI**, **Antigravity CLI**, **OpenCode**, **Kilo Code**, **Cursor**, **Windsurf**) with:
 
@@ -21,11 +23,11 @@ Conduit is an agent-agnostic runtime and [Model Context Protocol (MCP)](https://
 ## Architecture Overview
 
 <p align="center">
-  <a href="docs/architecture.html">
-    <img src="docs/conduit-system.png" alt="Conduit System Architecture Diagram" width="100%" />
+  <a href="https://htmlpreview.github.io/?https://github.com/codingwithjae/conduit/blob/main/docs/architecture.html">
+    <img src="https://raw.githubusercontent.com/codingwithjae/conduit/main/docs/conduit-system.png" alt="Conduit System Architecture Diagram" width="100%" />
   </a>
   <br />
-  <em>Interactive architecture diagram generated with <a href="https://github.com/tt-a1i/archify">Archify</a>. Open <a href="docs/architecture.html">docs/architecture.html</a> to inspect components and animate request paths.</em>
+  <em>Interactive architecture diagram generated with <a href="https://github.com/tt-a1i/archify">Archify</a>. Open <a href="https://htmlpreview.github.io/?https://github.com/codingwithjae/conduit/blob/main/docs/architecture.html">docs/architecture.html</a> to inspect components and animate request paths.</em>
 </p>
 
 ---

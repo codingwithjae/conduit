@@ -1,6 +1,6 @@
 {
   "name": "agent-conduit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A terminal-first, policy-aware model delegation CLI and MCP server.",
   "type": "module",
   "repository": {
