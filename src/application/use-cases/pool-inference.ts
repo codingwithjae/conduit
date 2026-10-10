@@ -1,9 +1,15 @@
+import { existsSync } from "node:fs"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
+import { homedir } from "node:os"
 import type { AccountStorePort } from "../ports/account-store.js"
 import type { ModelService } from "./model-service.js"
 import type { ProviderId } from "../ports/model-provider.js"
 import { providerIds } from "../ports/model-provider.js"
 import { ConduitError } from "../ports/conduit-error.js"
 import type { Account } from "../../domain/pool/account.js"
+
+const execFileAsync = promisify(execFile)
 
 export interface PoolInferenceInput {
   model: string
@@ -139,6 +145,11 @@ export class PoolInferenceUseCase {
       return this.accountInvoker(account, modelId, prompt)
     }
 
+    const localRunner = this.findLocalRunner()
+    if (localRunner && (account.importedFrom === "antigravity" || account.importedFrom === "codex" || account.importedFrom === "claude-code")) {
+      return this.invokeViaLocalRunner(localRunner, account, modelId, prompt)
+    }
+
     if (account.provider === "openai") {
       return this.invokeOpenAiSession(account, modelId, prompt)
     }
@@ -151,6 +162,59 @@ export class PoolInferenceUseCase {
         confirmExternalSend: true,
       })
     ).text
+  }
+
+  private findLocalRunner(): string | null {
+    if (process.env.KILO_BIN && existsSync(process.env.KILO_BIN)) return process.env.KILO_BIN
+    const candidates = [
+      `${homedir()}/.local/share/pnpm/kilo`,
+      "/usr/local/bin/kilo",
+      "/usr/bin/kilo",
+    ]
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) return candidate
+    }
+    return null
+  }
+
+  private async invokeViaLocalRunner(
+    runnerPath: string,
+    account: Account,
+    modelId: string,
+    prompt: string,
+  ): Promise<string> {
+    let resolvedModelId = modelId
+    if (account.provider === "google" && !modelId.startsWith("antigravity-")) {
+      resolvedModelId = `antigravity-${modelId}`
+    }
+    const fullModelRef = `${account.provider}/${resolvedModelId}`
+
+    try {
+      const { stdout } = await execFileAsync(
+        runnerPath,
+        ["run", "--model", fullModelRef, "--agent", "ask", "--format", "default", "--", prompt],
+        {
+          cwd: process.cwd(),
+          timeout: 120_000,
+        },
+      )
+      const cleanText = stdout.replace(/^\s*>.*$/m, "").trim()
+      if (!cleanText) {
+        throw new ConduitError("invalid_response", `${account.provider} returned an empty response.`)
+      }
+      return cleanText
+    } catch (error: any) {
+      const errText = String(error?.stderr || error?.message || "")
+      if (errText.includes("429") || errText.toLowerCase().includes("rate limit") || errText.toLowerCase().includes("exhausted")) {
+        throw new ConduitError("rate_limited", `Rate limit on ${account.provider} account ${account.email}`)
+      }
+      if (errText.includes("Did you mean: antigravity-")) {
+        if (!resolvedModelId.startsWith("antigravity-")) {
+          return this.invokeViaLocalRunner(runnerPath, account, `antigravity-${modelId}`, prompt)
+        }
+      }
+      throw ConduitError.from(error, "provider_rejected")
+    }
   }
 
   private async invokeOpenAiSession(account: Account, modelId: string, prompt: string): Promise<string> {
